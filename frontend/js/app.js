@@ -4,10 +4,10 @@
  */
 
 // Configuration
-// For local development use localhost, for production use your deployed backend URL
+// For local development use localhost, for production use relative path
 const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:8000/api/v1'
-    : 'https://your-backend-url.onrender.com/api/v1';  // Update this after deploying backend
+    : '/api/v1';  // Same domain on Vercel
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
