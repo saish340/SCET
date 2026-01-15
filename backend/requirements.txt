@@ -1,0 +1,31 @@
+# SCET Backend Dependencies
+# Python 3.9+
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.25
+aiosqlite==0.19.0
+
+# HTTP & Scraping
+aiohttp==3.9.1
+beautifulsoup4==4.12.3
+lxml==5.1.0
+
+# ML & NLP
+numpy==1.26.3
+scikit-learn==1.4.0
+sentence-transformers==2.2.2  # Optional: for semantic search
+
+# Utilities
+python-multipart==0.0.6
+python-dotenv==1.0.0
+
+# Development
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0

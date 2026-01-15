@@ -1,0 +1,25 @@
+# Minimal requirements (without optional heavy dependencies)
+# Use this if you don't need the full transformer models
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# HTTP & Scraping
+aiohttp>=3.9.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# ML (minimal - uses TF-IDF fallback instead of transformers)
+numpy>=1.26.0
+scikit-learn>=1.4.0
+
+# Utilities
+python-multipart>=0.0.6
+python-dotenv>=1.0.0

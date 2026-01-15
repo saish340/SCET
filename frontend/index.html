@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCET - Smart Copyright Expiry Tag</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">📜</span>
+                <h1>SCET</h1>
+                <span class="tagline">Smart Copyright Expiry Tag</span>
+            </div>
+            <nav class="nav-links">
+                <a href="#search" class="active">Search</a>
+                <a href="#about">About</a>
+                <a href="#api">API</a>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Hero Section -->
+            <section class="hero">
+                <h2>AI-Powered Copyright Analysis</h2>
+                <p>Search for any creative work and get instant copyright status, allowed uses, and expiry information</p>
+            </section>
+
+            <!-- Search Section -->
+            <section id="search" class="search-section">
+                <div class="search-box">
+                    <div class="search-input-container">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Enter title (e.g., 'react', 'romeo and juliet', 'coca-cola trademark')"
+                            autocomplete="off"
+                        >
+                        <button id="searchBtn" class="search-btn">
+                            <span class="btn-icon">🔍</span>
+                            Search
+                        </button>
+                    </div>
+                    <div class="search-options">
+                        <select id="contentType">
+                            <option value="">All Types</option>
+                            <optgroup label="📚 Creative Works">
+                                <option value="book">📚 Books</option>
+                                <option value="music">🎵 Music</option>
+                                <option value="film">🎬 Films</option>
+                                <option value="article">📄 Articles</option>
+                                <option value="artwork">🎨 Artwork</option>
+                            </optgroup>
+                            <optgroup label="💻 Software & Code">
+                                <option value="software">💻 Software</option>
+                                <option value="code">📦 Code/Library</option>
+                            </optgroup>
+                            <optgroup label="🚀 Innovation & Projects">
+                                <option value="project">🚀 Projects</option>
+                                <option value="innovation">💡 Innovation</option>
+                                <option value="drone">🤖 Drones/Robotics</option>
+                                <option value="technology">🔬 Technology</option>
+                                <option value="research_project">🔬 Research Projects</option>
+                            </optgroup>
+                            <optgroup label="🏢 Companies & Startups">
+                                <option value="startup">🚀 Startups</option>
+                                <option value="company">🏢 Companies</option>
+                            </optgroup>
+                            <optgroup label="⚖️ Intellectual Property">
+                                <option value="patent">📜 Patents</option>
+                                <option value="trademark">®️ Trademarks</option>
+                            </optgroup>
+                            <optgroup label="📑 Academic & Research">
+                                <option value="academic_paper">📑 Academic Papers</option>
+                            </optgroup>
+                        </select>
+                        <select id="jurisdiction">
+                            <option value="">🌍 All Countries</option>
+                            <option value="US">🇺🇸 United States</option>
+                            <option value="EU">🇪🇺 European Union</option>
+                            <option value="UK">🇬🇧 United Kingdom</option>
+                            <option value="CA">🇨🇦 Canada</option>
+                            <option value="AU">🇦🇺 Australia</option>
+                            <option value="JP">🇯🇵 Japan</option>
+                            <option value="IN">🇮🇳 India</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Spell Correction Notice -->
+                <div id="correctionNotice" class="correction-notice hidden">
+                    <span>Did you mean: </span>
+                    <a href="#" id="correctedQuery"></a>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="loading hidden">
+                    <div class="spinner"></div>
+                    <span>Searching with AI...</span>
+                </div>
+
+                <!-- AI Explanation -->
+                <div id="aiExplanation" class="ai-explanation hidden">
+                    <span class="ai-icon">🤖</span>
+                    <p id="aiExplanationText"></p>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults" class="search-results hidden">
+                    <h3>Search Results</h3>
+                    <div id="resultsList" class="results-list"></div>
+                </div>
+
+                <!-- Suggestions -->
+                <div id="suggestions" class="suggestions hidden">
+                    <span>Related searches: </span>
+                    <div id="suggestionsList"></div>
+                </div>
+            </section>
+
+            <!-- Smart Tag Display -->
+            <section id="smartTagSection" class="smart-tag-section hidden">
+                <h3>Smart Copyright Expiry Tag</h3>
+                <div id="smartTagContainer" class="smart-tag-container"></div>
+            </section>
+
+            <!-- About Section -->
+            <section id="about" class="about-section">
+                <h2>About SCET</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon">🔍</span>
+                        <h4>AI-Based Title Search</h4>
+                        <p>Intelligent search with spell correction, fuzzy matching, and semantic understanding. Works with partial titles and misspellings.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🌐</span>
+                        <h4>Live Data Collection</h4>
+                        <p>Dynamically collects metadata from Open Library, Wikipedia, MusicBrainz, and more. No static datasets used.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🧠</span>
+                        <h4>Machine Learning</h4>
+                        <p>Self-improving ML model that learns from searches and feedback. Accuracy increases over time.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">⚖️</span>
+                        <h4>Legal Rule Engine</h4>
+                        <p>Applies copyright rules based on jurisdiction, publication year, and creator status.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">📊</span>
+                        <h4>Confidence Scoring</h4>
+                        <p>Every analysis includes a confidence score so you know how reliable the prediction is.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🔄</span>
+                        <h4>Auto-Updating</h4>
+                        <p>Tags automatically update as data is verified and copyright status changes.</p>
+                    </div>
+                </div>
+
+                <div class="novelty-statement">
+                    <h4>📋 Novelty Statement</h4>
+                    <p>
+                        "This system does not rely on pre-existing datasets. It uses AI-based live data acquisition 
+                        and machine learning to dynamically infer copyright status and expiry, making it adaptive, 
+                        scalable, and legally informative."
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>SCET System</h4>
+                    <p>Research-grade AI system for copyright analysis</p>
+                </div>
+                <div class="footer-section">
+                    <h4>API Documentation</h4>
+                    <a href="http://localhost:8000/docs" target="_blank">Swagger UI</a>
+                    <a href="http://localhost:8000/redoc" target="_blank">ReDoc</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Disclaimer</h4>
+                    <p class="disclaimer-text">This tool provides informational analysis only and does not constitute legal advice.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 SCET - Smart Copyright Expiry Tag System</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
