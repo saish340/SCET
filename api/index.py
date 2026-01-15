@@ -151,7 +151,7 @@ class handler(BaseHTTPRequestHandler):
         elif path == '/api/v1/search':
             q = params.get('q', '')
             results = search_openlibrary(q) + search_wikipedia(q)
-            results.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+            results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
             response = {
                 "query": q,
                 "results": results[:10],
@@ -164,11 +164,52 @@ class handler(BaseHTTPRequestHandler):
             jurisdiction = params.get('jurisdiction', 'US')
             response = generate_smart_tag(title, year, jurisdiction)
         
+        elif path == '/api/v1/tag/detailed':
+            title = params.get('title', 'Unknown')
+            creator = params.get('creator', '')
+            year_str = params.get('year', '')
+            year = int(year_str) if year_str and year_str.isdigit() else None
+            content_type = params.get('type', 'unknown')
+            jurisdiction = params.get('jurisdiction', 'US')
+            
+            tag = generate_smart_tag(title, year, jurisdiction)
+            
+            # Add detailed information
+            response = {
+                "tag": tag,
+                "recommendations": [
+                    {"icon": "📚", "text": f"Verify publication date of '{title}' from official sources"},
+                    {"icon": "⚖️", "text": f"Check {jurisdiction} copyright law for specific exemptions"},
+                    {"icon": "🔍", "text": "Consider fair use provisions for educational purposes"}
+                ],
+                "quick_actions": [
+                    {"id": "verify", "label": "🔍 Verify Source", "action": "verify"},
+                    {"id": "share", "label": "📤 Share", "action": "share"},
+                    {"id": "download", "label": "📥 Download Report", "action": "download"}
+                ],
+                "risk_assessment": {
+                    "level": "low" if tag["status"] == "PUBLIC_DOMAIN" else "medium",
+                    "score": 0.2 if tag["status"] == "PUBLIC_DOMAIN" else 0.6,
+                    "factors": [
+                        f"Publication year: {year or 'Unknown'}",
+                        f"Jurisdiction: {jurisdiction}",
+                        f"Content type: {content_type}"
+                    ]
+                },
+                "summary": f"{tag['emoji']} {title} - {tag['status'].replace('_', ' ').title()}. {tag['expiry_info']}",
+                "legal_checklist": [
+                    {"item": "Verify publication date", "checked": year is not None},
+                    {"item": "Confirm author/creator", "checked": bool(creator)},
+                    {"item": "Check jurisdiction rules", "checked": True},
+                    {"item": "Review allowed uses", "checked": True}
+                ]
+            }
+        
         else:
             response = {
                 "name": "SCET - Smart Copyright Expiry Tag",
                 "version": "1.0.0",
-                "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/health"]
+                "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/tag/detailed", "/api/v1/health"]
             }
         
         self.wfile.write(json.dumps(response).encode())
