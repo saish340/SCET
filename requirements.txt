@@ -4,5 +4,6 @@ aiohttp==3.9.1
 beautifulsoup4==4.12.2
 sqlalchemy==2.0.25
 pydantic==2.5.3
+pydantic-settings==2.1.0
 numpy==1.26.3
 python-dotenv==1.0.0
