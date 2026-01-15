@@ -4,7 +4,10 @@
  */
 
 // Configuration
-const API_BASE = 'http://localhost:8000/api/v1';
+// For local development use localhost, for production use your deployed backend URL
+const API_BASE = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8000/api/v1'
+    : 'https://your-backend-url.onrender.com/api/v1';  // Update this after deploying backend
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
