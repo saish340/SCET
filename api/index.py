@@ -20,11 +20,18 @@ def clean_html(text):
         return ""
     return re.sub(r'<[^>]+>', '', text).strip()
 
+def make_request(url):
+    """Make HTTP request with proper headers"""
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'SCET/1.0 (Smart Copyright Expiry Tag; https://scet.vercel.app)'
+    })
+    return urllib.request.urlopen(req, timeout=10)
+
 def search_openlibrary(query):
     results = []
     try:
         url = f"https://openlibrary.org/search.json?q={urllib.parse.quote(query)}&limit=5"
-        with urllib.request.urlopen(url, timeout=10) as resp:
+        with make_request(url) as resp:
             data = json.loads(resp.read().decode())
             for doc in data.get('docs', [])[:5]:
                 results.append({
@@ -44,7 +51,7 @@ def search_wikipedia(query):
     results = []
     try:
         url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&format=json&srlimit=5"
-        with urllib.request.urlopen(url, timeout=10) as resp:
+        with make_request(url) as resp:
             data = json.loads(resp.read().decode())
             for item in data.get('query', {}).get('search', [])[:5]:
                 snippet = clean_html(item.get('snippet', ''))
