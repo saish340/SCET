@@ -51,17 +51,17 @@ async function performSearch() {
     hideElements([correctionNotice, aiExplanation, searchResults, suggestions, smartTagSection]);
     
     try {
-        const response = await fetch(`${API_BASE}/search`, {
-            method: 'POST',
+        const params = new URLSearchParams({
+            q: query,
+            content_type: contentType.value || '',
+            jurisdiction: jurisdiction.value || 'US'
+        });
+        
+        const response = await fetch(`${API_BASE}/search?${params}`, {
+            method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                query: query,
-                content_type: contentType.value || null,
-                max_results: 10,
-                include_similar: true
-            })
+                'Accept': 'application/json'
+            }
         });
         
         if (!response.ok) {
