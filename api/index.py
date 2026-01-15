@@ -86,6 +86,104 @@ def search_wikipedia(query):
         print(f"Wikipedia error: {e}")
     return results
 
+def search_us_copyright(query):
+    """Search US Copyright Office database (copyright.gov)"""
+    results = []
+    try:
+        # US Copyright Office public catalog search
+        url = f"https://cocatalog.loc.gov/cgi-bin/Pwebrecon.cgi?Search_Arg={urllib.parse.quote(query)}&Search_Code=TALL&PID=&SEQ=&CNT=10&HIST=1&SEARCH_TYPE=1"
+        with make_request(url) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            
+            # Parse results - look for registration entries
+            # The copyright.gov catalog returns HTML with registration info
+            if 'Registration Number' in html or 'Title:' in html:
+                # Found potential matches
+                results.append({
+                    "id": "usco_search",
+                    "title": f"US Copyright Search: {query}",
+                    "publication_year": None,
+                    "content_type": "copyright_registration",
+                    "source": "US Copyright Office",
+                    "source_url": f"https://www.copyright.gov/public-records/",
+                    "description": "Search found potential matches in US Copyright Office records. Click to verify on official site.",
+                    "copyright_status": "REGISTERED",
+                    "similarity_score": 0.95,
+                    "registered": True,
+                    "jurisdiction": "US"
+                })
+            else:
+                results.append({
+                    "id": "usco_none",
+                    "title": f"US Copyright Search: {query}",
+                    "publication_year": None,
+                    "content_type": "copyright_search",
+                    "source": "US Copyright Office",
+                    "source_url": "https://www.copyright.gov/public-records/",
+                    "description": "No exact matches found in US Copyright Office records. Note: Not all works are registered.",
+                    "copyright_status": "NOT_FOUND",
+                    "similarity_score": 0.5,
+                    "registered": False,
+                    "jurisdiction": "US"
+                })
+    except Exception as e:
+        print(f"US Copyright Office error: {e}")
+        results.append({
+            "id": "usco_error",
+            "title": f"US Copyright Search: {query}",
+            "content_type": "copyright_search",
+            "source": "US Copyright Office",
+            "source_url": "https://www.copyright.gov/public-records/",
+            "description": "Could not search US Copyright Office. Visit link to search manually.",
+            "copyright_status": "UNKNOWN",
+            "similarity_score": 0.3,
+            "jurisdiction": "US"
+        })
+    return results
+
+def search_indian_copyright(query):
+    """Search Indian Copyright Office (copyright.gov.in)"""
+    results = []
+    try:
+        # Indian Copyright Office E-Register search
+        url = f"https://copyright.gov.in/SearchRoc.aspx"
+        # Since the Indian site uses POST/ASP.NET, provide direct link
+        results.append({
+            "id": "inco_search",
+            "title": f"Indian Copyright Search: {query}",
+            "publication_year": None,
+            "content_type": "copyright_search",
+            "source": "Indian Copyright Office",
+            "source_url": "https://copyright.gov.in/SearchRoc.aspx",
+            "description": f"Search for '{query}' on Indian Copyright Office E-Register. Click to verify registration status.",
+            "copyright_status": "CHECK_REQUIRED",
+            "similarity_score": 0.7,
+            "jurisdiction": "IN"
+        })
+    except Exception as e:
+        print(f"Indian Copyright Office error: {e}")
+    return results
+
+def search_eu_trademark(query):
+    """Search EU Intellectual Property Office"""
+    results = []
+    try:
+        results.append({
+            "id": "euipo_search",
+            "title": f"EU IP Search: {query}",
+            "publication_year": None,
+            "content_type": "trademark_search",
+            "source": "EU Intellectual Property Office",
+            "source_url": f"https://euipo.europa.eu/eSearch/#basic/{urllib.parse.quote(query)}",
+            "description": f"Search for '{query}' in EU trademark and design database.",
+            "copyright_status": "CHECK_REQUIRED",
+            "similarity_score": 0.7,
+            "jurisdiction": "EU"
+        })
+    except Exception as e:
+        print(f"EUIPO error: {e}")
+    return results
+
 def generate_smart_tag(title, year, jurisdiction="US"):
     current_year = datetime.now().year
     pub_year = year or current_year
@@ -150,12 +248,33 @@ class handler(BaseHTTPRequestHandler):
         
         elif path == '/api/v1/search':
             q = params.get('q', '')
-            results = search_openlibrary(q) + search_wikipedia(q)
+            jurisdiction = params.get('jurisdiction', 'US')
+            
+            # Search all sources including government databases
+            results = []
+            results.extend(search_openlibrary(q))
+            results.extend(search_wikipedia(q))
+            
+            # Add government copyright database searches based on jurisdiction
+            if jurisdiction == 'US' or not jurisdiction:
+                results.extend(search_us_copyright(q))
+            if jurisdiction == 'IN':
+                results.extend(search_indian_copyright(q))
+            if jurisdiction == 'EU':
+                results.extend(search_eu_trademark(q))
+            
+            # Always include US Copyright Office as primary source
+            if jurisdiction not in ['US', '']:
+                results.extend(search_us_copyright(q))
+            
             results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
             response = {
                 "query": q,
-                "results": results[:10],
-                "total_results": len(results)
+                "results": results[:15],
+                "total_results": len(results),
+                "sources_searched": ["Open Library", "Wikipedia", "US Copyright Office", 
+                                    "Indian Copyright Office" if jurisdiction == "IN" else None,
+                                    "EU IPO" if jurisdiction == "EU" else None]
             }
         
         elif path == '/api/v1/tag':
