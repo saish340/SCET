@@ -27,21 +27,36 @@ def make_request(url):
     })
     return urllib.request.urlopen(req, timeout=10)
 
+def get_copyright_status(year):
+    """Determine copyright status based on publication year"""
+    if not year:
+        return "UNKNOWN"
+    current_year = datetime.now().year
+    if year < 1929:
+        return "PUBLIC_DOMAIN"
+    elif current_year - year > 70:
+        return "PUBLIC_DOMAIN"
+    else:
+        return "PROTECTED"
+
 def search_openlibrary(query):
     results = []
     try:
         url = f"https://openlibrary.org/search.json?q={urllib.parse.quote(query)}&limit=5"
         with make_request(url) as resp:
             data = json.loads(resp.read().decode())
-            for doc in data.get('docs', [])[:5]:
+            for i, doc in enumerate(data.get('docs', [])[:5]):
+                year = doc.get('first_publish_year')
                 results.append({
+                    "id": f"ol_{i}",
                     "title": doc.get('title', ''),
                     "creator": ', '.join(doc.get('author_name', [])[:2]) if doc.get('author_name') else None,
-                    "publication_year": doc.get('first_publish_year'),
+                    "publication_year": year,
                     "content_type": "book",
+                    "source": "Open Library",
                     "source_url": f"https://openlibrary.org{doc.get('key', '')}",
-                    "source_name": "Open Library",
-                    "confidence": 0.85
+                    "copyright_status": get_copyright_status(year),
+                    "similarity_score": 0.85 - (i * 0.05)
                 })
     except Exception as e:
         print(f"OpenLibrary error: {e}")
@@ -53,16 +68,19 @@ def search_wikipedia(query):
         url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&format=json&srlimit=5"
         with make_request(url) as resp:
             data = json.loads(resp.read().decode())
-            for item in data.get('query', {}).get('search', [])[:5]:
+            for i, item in enumerate(data.get('query', {}).get('search', [])[:5]):
                 snippet = clean_html(item.get('snippet', ''))
+                year = extract_year(snippet)
                 results.append({
+                    "id": f"wiki_{i}",
                     "title": item.get('title', ''),
-                    "publication_year": extract_year(snippet),
+                    "publication_year": year,
                     "content_type": "article",
+                    "source": "Wikipedia",
                     "source_url": f"https://en.wikipedia.org/wiki/{item.get('title', '').replace(' ', '_')}",
-                    "source_name": "Wikipedia",
                     "description": snippet[:200],
-                    "confidence": 0.7
+                    "copyright_status": get_copyright_status(year),
+                    "similarity_score": 0.75 - (i * 0.05)
                 })
     except Exception as e:
         print(f"Wikipedia error: {e}")
