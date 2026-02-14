@@ -200,55 +200,82 @@ def generate_smart_tag(title, year, jurisdiction="US", creator=""):
     if pub_year < rule["pd_before"]:
         return {
             "status": "PUBLIC_DOMAIN",
+            "status_text": "Public Domain",
+            "status_color": "green",
+            "status_emoji": "🌍",
             "copyright_status": "Public Domain",
             "emoji": "🌍",
             "title": title,
             "creator": creator,
             "expiry_tag": f"Expired (published {pub_year})",
             "expiry_info": f"Published in {pub_year}, now in public domain",
+            "expiry_timeline": f"Published in {pub_year}, now in public domain",
             "rights": "No Rights Reserved - Public Domain",
             "allowed_uses": ["✅ Free to use", "✅ Modify", "✅ Distribute", "✅ Commercial use"],
+            "allowed_uses_summary": ["✓ Free to use", "✓ Modify", "✓ Distribute", "✓ Commercial use"],
             "confidence": 0.9,
             "confidence_score": 0.9,
+            "confidence_level": "High",
             "jurisdiction": jurisdiction,
             "last_verified": str(current_year),
-            "ai_reasoning": f"Work published before {rule['pd_before']} is in the public domain."
+            "ai_reasoning": f"Work published before {rule['pd_before']} is in the public domain.",
+            "disclaimer": "This analysis is for informational purposes only and does not constitute legal advice.",
+            "generated_at": datetime.now().isoformat(),
+            "tag_version": "1.0"
         }
     elif current_year - pub_year > rule["duration"]:
         return {
             "status": "PUBLIC_DOMAIN", 
+            "status_text": "Public Domain",
+            "status_color": "green",
+            "status_emoji": "🌍",
             "copyright_status": "Public Domain",
             "emoji": "🌍",
             "title": title,
             "creator": creator,
             "expiry_tag": f"Expired (published {pub_year})",
             "expiry_info": f"Copyright expired (published {pub_year})",
+            "expiry_timeline": f"Copyright expired (published {pub_year})",
             "rights": "No Rights Reserved - Public Domain",
             "allowed_uses": ["✅ Free to use", "✅ Modify", "✅ Distribute", "✅ Commercial use"],
+            "allowed_uses_summary": ["✓ Free to use", "✓ Modify", "✓ Distribute", "✓ Commercial use"],
             "confidence": 0.85,
             "confidence_score": 0.85,
+            "confidence_level": "High",
             "jurisdiction": jurisdiction,
             "last_verified": str(current_year),
-            "ai_reasoning": f"Copyright duration of {rule['duration']} years has passed."
+            "ai_reasoning": f"Copyright duration of {rule['duration']} years has passed.",
+            "disclaimer": "This analysis is for informational purposes only and does not constitute legal advice.",
+            "generated_at": datetime.now().isoformat(),
+            "tag_version": "1.0"
         }
     else:
         years_remaining = rule["duration"] - (current_year - pub_year)
         expiry_year = pub_year + rule["duration"]
         return {
             "status": "PROTECTED",
+            "status_text": "Copyright Protected",
+            "status_color": "red",
+            "status_emoji": "🔒",
             "copyright_status": "Copyright Protected",
             "emoji": "🔒",
             "title": title,
             "creator": creator,
             "expiry_tag": f"Estimated expiry {expiry_year}",
             "expiry_info": f"Protected until ~{expiry_year} ({years_remaining} years remaining)",
+            "expiry_timeline": f"Protected until ~{expiry_year} ({years_remaining} years remaining)",
             "rights": "All Rights Reserved",
             "allowed_uses": ["⚠️ Fair use only", "❌ No commercial use without license"],
+            "allowed_uses_summary": ["✓ Fair use", "✗ Commercial use without license"],
             "confidence": 0.8,
             "confidence_score": 0.8,
+            "confidence_level": "Medium",
             "jurisdiction": jurisdiction,
             "last_verified": str(current_year),
-            "ai_reasoning": f"Work is still under copyright protection in {jurisdiction}."
+            "ai_reasoning": f"Work is still under copyright protection in {jurisdiction}.",
+            "disclaimer": "This analysis is for informational purposes only and does not constitute legal advice.",
+            "generated_at": datetime.now().isoformat(),
+            "tag_version": "1.0"
         }
 
 class handler(BaseHTTPRequestHandler):
@@ -310,15 +337,15 @@ class handler(BaseHTTPRequestHandler):
             content_type = params.get('type', 'unknown')
             jurisdiction = params.get('jurisdiction', 'US')
             
-            tag = generate_smart_tag(title, year, jurisdiction, creator)
+            is_public_domain = tag["status"] == "PUBLIC_DOMAIN"
             
             # Add detailed information
             response = {
                 "tag": tag,
                 "recommendations": [
-                    {"icon": "📚", "text": f"Verify publication date of '{title}' from official sources"},
-                    {"icon": "⚖️", "text": f"Check {jurisdiction} copyright law for specific exemptions"},
-                    {"icon": "🔍", "text": "Consider fair use provisions for educational purposes"}
+                    {"icon": "📚", "title": "Verify Source", "type": "info", "description": f"Verify publication date of '{title}' from official sources"},
+                    {"icon": "⚖️", "title": "Check Laws", "type": "warning", "description": f"Check {jurisdiction} copyright law for specific exemptions"},
+                    {"icon": "🔍", "title": "Fair Use", "type": "info", "description": "Consider fair use provisions for educational purposes"}
                 ],
                 "quick_actions": [
                     {"id": "verify", "label": "🔍 Verify Source", "action": "verify"},
@@ -326,8 +353,13 @@ class handler(BaseHTTPRequestHandler):
                     {"id": "download", "label": "📥 Download Report", "action": "download"}
                 ],
                 "risk_assessment": {
-                    "level": "low" if tag["status"] == "PUBLIC_DOMAIN" else "medium",
-                    "score": 0.2 if tag["status"] == "PUBLIC_DOMAIN" else 0.6,
+                    "level": "Low" if is_public_domain else "Medium",
+                    "color": "#28a745" if is_public_domain else "#ffc107",
+                    "icon": "✅" if is_public_domain else "⚠️",
+                    "description": "This work is in the public domain and can be freely used." if is_public_domain else "This work is under copyright protection. Use requires permission or fair use justification.",
+                    "commercial_risk": "None" if is_public_domain else "High",
+                    "personal_risk": "None" if is_public_domain else "Low",
+                    "score": 0.2 if is_public_domain else 0.6,
                     "factors": [
                         f"Publication year: {year or 'Unknown'}",
                         f"Jurisdiction: {jurisdiction}",
@@ -336,10 +368,10 @@ class handler(BaseHTTPRequestHandler):
                 },
                 "summary": f"{tag['emoji']} {title} - {tag['status'].replace('_', ' ').title()}. {tag['expiry_info']}",
                 "legal_checklist": [
-                    {"item": "Verify publication date", "checked": year is not None},
-                    {"item": "Confirm author/creator", "checked": bool(creator)},
-                    {"item": "Check jurisdiction rules", "checked": True},
-                    {"item": "Review allowed uses", "checked": True}
+                    {"item": "Verify publication date", "checked": year is not None, "required": True, "status": "done" if year else "pending"},
+                    {"item": "Confirm author/creator", "checked": bool(creator), "required": True, "status": "done" if creator else "pending"},
+                    {"item": "Check jurisdiction rules", "checked": True, "required": True, "status": "done"},
+                    {"item": "Review allowed uses", "checked": True, "required": False, "status": "done"}
                 ]
             }
         
