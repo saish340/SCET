@@ -3,6 +3,9 @@
  * Copyright Status Tag - JavaScript
  */
 
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+
 // Configuration
 // For local development use localhost, for production use relative path
 const API_BASE = window.location.hostname === 'localhost' 
@@ -26,21 +29,34 @@ const suggestionsList = document.getElementById('suggestionsList');
 const smartTagSection = document.getElementById('smartTagSection');
 const smartTagContainer = document.getElementById('smartTagContainer');
 
+// Verify elements exist
+console.log('SCET: DOM elements loaded', {
+    searchInput: !!searchInput,
+    searchBtn: !!searchBtn,
+    resultsList: !!resultsList
+});
+
 // State
 let currentSearchId = null;
 let selectedWorkId = null;
 
 // Event Listeners
-searchBtn.addEventListener('click', performSearch);
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') performSearch();
-});
+if (searchBtn) {
+    searchBtn.addEventListener('click', performSearch);
+}
+if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performSearch();
+    });
+}
 
-correctedQuery.addEventListener('click', (e) => {
-    e.preventDefault();
-    searchInput.value = correctedQuery.textContent;
-    performSearch();
-});
+if (correctedQuery) {
+    correctedQuery.addEventListener('click', (e) => {
+        e.preventDefault();
+        searchInput.value = correctedQuery.textContent;
+        performSearch();
+    });
+}
 
 // Main Search Function
 async function performSearch() {
@@ -489,5 +505,11 @@ const examples = [
 const searchHint = document.createElement('div');
 searchHint.className = 'search-hint';
 searchHint.style.cssText = 'font-size: 13px; color: var(--gray-500); margin-top: 8px;';
-searchHint.innerHTML = `Try: ${examples.map(e => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${e}';performSearch();return false;">${e}</a>`).join(' • ')}`;
-document.querySelector('.search-box').appendChild(searchHint);
+searchHint.innerHTML = `Try: ${examples.map(e => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${e}';window.performSearch();return false;">${e}</a>`).join(' • ')}`;
+const searchBox = document.querySelector('.search-box');
+if (searchBox) searchBox.appendChild(searchHint);
+
+// Make performSearch available globally for onclick handlers
+window.performSearch = performSearch;
+
+}); // End DOMContentLoaded
