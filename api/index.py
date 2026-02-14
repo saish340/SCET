@@ -1,6 +1,7 @@
 """
 SCET API for Vercel Serverless
-Simplified version for serverless deployment
+Copyright Status Tag - Simplified version for serverless deployment
+Version: 1.1.0 - Updated tag fields
 """
 from http.server import BaseHTTPRequestHandler
 import json
