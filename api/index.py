@@ -338,6 +338,7 @@ class handler(BaseHTTPRequestHandler):
             content_type = params.get('type', 'unknown')
             jurisdiction = params.get('jurisdiction', 'US')
             
+            tag = generate_smart_tag(title, year, jurisdiction, creator)
             is_public_domain = tag["status"] == "PUBLIC_DOMAIN"
             
             # Add detailed information
