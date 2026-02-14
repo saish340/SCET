@@ -1,6 +1,6 @@
 /**
  * SCET Frontend Application
- * Smart Copyright Expiry Tag - JavaScript
+ * Copyright Status Tag - JavaScript
  */
 
 // Configuration

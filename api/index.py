@@ -184,7 +184,7 @@ def search_eu_trademark(query):
         print(f"EUIPO error: {e}")
     return results
 
-def generate_smart_tag(title, year, jurisdiction="US"):
+def generate_smart_tag(title, year, jurisdiction="US", creator=""):
     current_year = datetime.now().year
     pub_year = year or current_year
     
@@ -200,35 +200,54 @@ def generate_smart_tag(title, year, jurisdiction="US"):
     if pub_year < rule["pd_before"]:
         return {
             "status": "PUBLIC_DOMAIN",
+            "copyright_status": "Public Domain",
             "emoji": "🌍",
             "title": title,
+            "creator": creator,
+            "expiry_tag": f"Expired (published {pub_year})",
             "expiry_info": f"Published in {pub_year}, now in public domain",
+            "rights": "No Rights Reserved - Public Domain",
             "allowed_uses": ["✅ Free to use", "✅ Modify", "✅ Distribute", "✅ Commercial use"],
             "confidence": 0.9,
+            "confidence_score": 0.9,
             "jurisdiction": jurisdiction,
+            "last_verified": str(current_year),
             "ai_reasoning": f"Work published before {rule['pd_before']} is in the public domain."
         }
     elif current_year - pub_year > rule["duration"]:
         return {
             "status": "PUBLIC_DOMAIN", 
+            "copyright_status": "Public Domain",
             "emoji": "🌍",
             "title": title,
+            "creator": creator,
+            "expiry_tag": f"Expired (published {pub_year})",
             "expiry_info": f"Copyright expired (published {pub_year})",
+            "rights": "No Rights Reserved - Public Domain",
             "allowed_uses": ["✅ Free to use", "✅ Modify", "✅ Distribute", "✅ Commercial use"],
             "confidence": 0.85,
+            "confidence_score": 0.85,
             "jurisdiction": jurisdiction,
+            "last_verified": str(current_year),
             "ai_reasoning": f"Copyright duration of {rule['duration']} years has passed."
         }
     else:
         years_remaining = rule["duration"] - (current_year - pub_year)
+        expiry_year = pub_year + rule["duration"]
         return {
             "status": "PROTECTED",
+            "copyright_status": "Copyright Protected",
             "emoji": "🔒",
             "title": title,
-            "expiry_info": f"Protected until ~{pub_year + rule['duration']} ({years_remaining} years remaining)",
+            "creator": creator,
+            "expiry_tag": f"Estimated expiry {expiry_year}",
+            "expiry_info": f"Protected until ~{expiry_year} ({years_remaining} years remaining)",
+            "rights": "All Rights Reserved",
             "allowed_uses": ["⚠️ Fair use only", "❌ No commercial use without license"],
             "confidence": 0.8,
+            "confidence_score": 0.8,
             "jurisdiction": jurisdiction,
+            "last_verified": str(current_year),
             "ai_reasoning": f"Work is still under copyright protection in {jurisdiction}."
         }
 
@@ -291,7 +310,7 @@ class handler(BaseHTTPRequestHandler):
             content_type = params.get('type', 'unknown')
             jurisdiction = params.get('jurisdiction', 'US')
             
-            tag = generate_smart_tag(title, year, jurisdiction)
+            tag = generate_smart_tag(title, year, jurisdiction, creator)
             
             # Add detailed information
             response = {
@@ -326,7 +345,7 @@ class handler(BaseHTTPRequestHandler):
         
         else:
             response = {
-                "name": "SCET - Smart Copyright Expiry Tag",
+                "name": "SCET - Copyright Status Tag",
                 "version": "1.0.0",
                 "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/tag/detailed", "/api/v1/health"]
             }
