@@ -190,41 +190,57 @@ async function selectResult(result) {
 // Display Enhanced Smart Tag with Recommendations
 function displayDetailedSmartTag(data) {
     const tag = data.tag;
-    const colorClass = `status-${tag.status_color}`;
     
-    // Build recommendations HTML
+    // Add fallbacks for missing fields from API
+    const statusColor = tag.status_color || (tag.status === 'PUBLIC_DOMAIN' ? 'green' : 'red');
+    const statusEmoji = tag.status_emoji || tag.emoji || '📋';
+    const statusText = tag.status_text || (tag.status === 'PUBLIC_DOMAIN' ? 'Public Domain' : 'Copyright Protected');
+    const expiryTimeline = tag.expiry_timeline || tag.expiry_info || 'Unknown';
+    const allowedUsesSummary = tag.allowed_uses_summary || tag.allowed_uses || [];
+    const confidenceLevel = tag.confidence_level || (tag.confidence >= 0.8 ? 'High' : 'Medium');
+    const confidenceScore = tag.confidence_score || tag.confidence || 0.8;
+    const tagDisclaimer = tag.disclaimer || 'This analysis is for informational purposes only.';
+    const generatedAt = tag.generated_at || new Date().toISOString();
+    const tagVersion = tag.tag_version || '1.0';
+    
+    const colorClass = `status-${statusColor}`;
+    
+    // Build recommendations HTML with fallbacks
     const recommendationsHtml = data.recommendations.map(rec => `
-        <div class="recommendation-item ${rec.type}">
+        <div class="recommendation-item ${rec.type || 'info'}">
             <span class="rec-icon">${rec.icon}</span>
             <div class="rec-content">
-                <strong>${rec.title}</strong>
-                <p>${rec.description}</p>
+                <strong>${rec.title || 'Recommendation'}</strong>
+                <p>${rec.description || rec.text || ''}</p>
             </div>
         </div>
     `).join('');
     
-    // Build risk assessment HTML
+    // Build risk assessment HTML with fallbacks
     const risk = data.risk_assessment;
+    const riskColor = risk.color || (risk.level === 'low' || risk.level === 'Low' ? '#28a745' : '#ffc107');
+    const riskIcon = risk.icon || (risk.level === 'low' || risk.level === 'Low' ? '✅' : '⚠️');
+    const riskDesc = risk.description || `Risk level: ${risk.level}`;
     const riskHtml = `
-        <div class="risk-assessment" style="border-left: 4px solid ${risk.color}">
+        <div class="risk-assessment" style="border-left: 4px solid ${riskColor}">`
             <div class="risk-header">
-                <span class="risk-icon">${risk.icon}</span>
-                <span class="risk-level" style="color: ${risk.color}">${risk.level} Risk</span>
+                <span class="risk-icon">${riskIcon}</span>
+                <span class="risk-level" style="color: ${riskColor}">${risk.level} Risk</span>
             </div>
-            <p class="risk-description">${risk.description}</p>
+            <p class="risk-description">${riskDesc}</p>
             <div class="risk-details">
-                <span>📊 Commercial: ${risk.commercial_risk}</span>
-                <span>👤 Personal: ${risk.personal_risk}</span>
+                <span>📊 Commercial: ${risk.commercial_risk || 'Unknown'}</span>
+                <span>👤 Personal: ${risk.personal_risk || 'Unknown'}</span>
             </div>
         </div>
     `;
     
-    // Build legal checklist HTML
+    // Build legal checklist HTML with fallbacks
     const checklistHtml = data.legal_checklist.map(item => `
-        <div class="checklist-item ${item.status}">
-            <span class="check-icon">${item.required ? '☐' : '○'}</span>
+        <div class="checklist-item ${item.status || (item.checked ? 'done' : 'pending')}">
+            <span class="check-icon">${item.required !== false ? '☐' : '○'}</span>
             <span class="check-text">${item.item}</span>
-            <span class="check-status">${item.status}</span>
+            <span class="check-status">${item.status || (item.checked ? 'done' : 'pending')}</span>
         </div>
     `).join('');
     
@@ -236,9 +252,9 @@ function displayDetailedSmartTag(data) {
     smartTagContainer.innerHTML = `
         <div class="smart-tag ${colorClass}">
             <div class="tag-header">
-                <span class="tag-emoji">${tag.status_emoji}</span>
-                <span class="tag-status" style="color: var(--${getColorVar(tag.status_color)}-color)">
-                    ${tag.status_text}
+                <span class="tag-emoji">${statusEmoji}</span>
+                <span class="tag-status" style="color: var(--${getColorVar(statusColor)}-color)">
+                    ${statusText}
                 </span>
             </div>
             
@@ -248,7 +264,7 @@ function displayDetailedSmartTag(data) {
             
             <div class="tag-timeline">
                 <span>⏱</span>
-                <span>${escapeHtml(tag.expiry_timeline)}</span>
+                <span>${escapeHtml(expiryTimeline)}</span>
             </div>
             
             <!-- Summary Section -->
@@ -266,8 +282,8 @@ function displayDetailedSmartTag(data) {
             <div class="tag-uses">
                 <h4>📋 Allowed Uses</h4>
                 <div class="uses-list">
-                    ${tag.allowed_uses_summary.map(use => {
-                        const isAllowed = use.startsWith('✓');
+                    ${allowedUsesSummary.map(use => {
+                        const isAllowed = use.startsWith('✓') || use.startsWith('✅');
                         return `<span class="use-item ${isAllowed ? 'allowed' : 'denied'}">${escapeHtml(use)}</span>`;
                     }).join('')}
                 </div>
@@ -291,9 +307,9 @@ function displayDetailedSmartTag(data) {
             
             <!-- Confidence -->
             <div class="tag-confidence">
-                <span>🎯 Confidence: ${tag.confidence_level} (${Math.round(tag.confidence_score * 100)}%)</span>
+                <span>🎯 Confidence: ${confidenceLevel} (${Math.round(confidenceScore * 100)}%)</span>
                 <div class="confidence-bar">
-                    <div class="confidence-fill" style="width: ${tag.confidence_score * 100}%; background: ${getConfidenceColor(tag.confidence_score)}"></div>
+                    <div class="confidence-fill" style="width: ${confidenceScore * 100}%; background: ${getConfidenceColor(confidenceScore)}"></div>
                 </div>
             </div>
             
@@ -313,12 +329,12 @@ function displayDetailedSmartTag(data) {
             </div>
             
             <div class="tag-disclaimer">
-                ⚠️ ${escapeHtml(tag.disclaimer)}
+                ⚠️ ${escapeHtml(tagDisclaimer)}
             </div>
             
             <div class="tag-meta">
-                <span>Generated: ${new Date(tag.generated_at).toLocaleDateString()}</span>
-                <span>SCET v${tag.tag_version} | ${tag.jurisdiction}</span>
+                <span>Generated: ${new Date(generatedAt).toLocaleDateString()}</span>
+                <span>SCET v${tagVersion} | ${tag.jurisdiction}</span>
             </div>
         </div>
     `;
