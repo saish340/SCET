@@ -1,0 +1,6 @@
+[project]
+name = "scet-api"
+version = "1.0.0"
+description = "SCET Copyright Status Tag API"
+requires-python = ">=3.9"
+dependencies = []
