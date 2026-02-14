@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCET - Copyright Status Tag</title>
     <link rel="stylesheet" href="css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
@@ -15,260 +14,137 @@
                 <h1>SCET</h1>
                 <span class="tagline">Copyright Status Tag</span>
             </div>
-            <nav class="nav-links">
-                <a href="#search" class="active">Search</a>
-                <a href="#about">About</a>
-                <a href="#api">API</a>
-            </nav>
         </header>
 
         <main class="main-content">
             <section class="hero">
                 <h2>AI-Powered Copyright Analysis</h2>
-                <p>Search for any creative work and get instant copyright status, allowed uses, and expiry information</p>
+                <p>Search for any creative work and get instant copyright status</p>
             </section>
 
             <section id="search" class="search-section">
                 <div class="search-box">
                     <div class="search-input-container">
-                        <input type="text" id="searchInput" placeholder="Search copyright status by title (e.g., 'Harry Potter', 'Romeo and Juliet')" autocomplete="off">
-                        <button id="searchBtn" class="search-btn">
-                            <span class="btn-icon">🔍</span>
-                            Search
-                        </button>
+                        <input type="text" id="searchInput" placeholder="Search (e.g., Harry Potter, Romeo and Juliet)">
+                        <button id="searchBtn" class="search-btn">🔍 Search</button>
                     </div>
                     <div class="search-options">
-                        <select id="contentType">
-                            <option value="">All Types</option>
-                            <option value="book">📚 Books</option>
-                            <option value="music">🎵 Music</option>
-                            <option value="film">🎬 Films</option>
-                            <option value="article">📄 Articles</option>
-                        </select>
-                        <select id="jurisdiction">
-                            <option value="">🌍 All Countries</option>
-                            <option value="US">🇺🇸 United States</option>
-                            <option value="EU">🇪🇺 European Union</option>
-                            <option value="UK">🇬🇧 United Kingdom</option>
-                            <option value="IN">🇮🇳 India</option>
-                        </select>
+                        <select id="contentType"><option value="">All Types</option><option value="book">Books</option></select>
+                        <select id="jurisdiction"><option value="US">🇺🇸 US</option><option value="IN">🇮🇳 India</option></select>
                     </div>
                 </div>
-
-                <div id="loadingIndicator" class="loading hidden">
-                    <div class="spinner"></div>
-                    <span>Searching with AI...</span>
-                </div>
-
-                <div id="searchResults" class="search-results hidden">
-                    <h3>Search Results</h3>
-                    <div id="resultsList" class="results-list"></div>
-                </div>
-            </section>
-
-            <section id="smartTagSection" class="smart-tag-section hidden">
-                <h3>Copyright Status</h3>
-                <div id="smartTagContainer" class="smart-tag-container"></div>
-            </section>
-
-            <section id="about" class="about-section">
-                <h2>About SCET</h2>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <span class="feature-icon">🔍</span>
-                        <h4>AI-Based Title Search</h4>
-                        <p>Intelligent search with spell correction, fuzzy matching, and semantic understanding.</p>
-                    </div>
-                    <div class="feature-card">
-                        <span class="feature-icon">🌐</span>
-                        <h4>Live Data Collection</h4>
-                        <p>Dynamically collects metadata from Open Library, Wikipedia, and more.</p>
-                    </div>
-                    <div class="feature-card">
-                        <span class="feature-icon">⚖️</span>
-                        <h4>Legal Rule Engine</h4>
-                        <p>Applies copyright rules based on jurisdiction and publication year.</p>
-                    </div>
-                </div>
+                <div id="loading" class="loading hidden"><div class="spinner"></div><span>Searching...</span></div>
+                <div id="results" class="search-results hidden"><h3>Results</h3><div id="resultsList"></div></div>
+                <div id="tagSection" class="smart-tag-section hidden"><h3>Copyright Status</h3><div id="tagContainer"></div></div>
             </section>
         </main>
 
-        <footer class="footer">
-            <div class="footer-bottom">
-                <p>&copy; 2026 SCET - Copyright Status Tag System</p>
-            </div>
-        </footer>
+        <footer class="footer"><p>© 2026 SCET</p></footer>
     </div>
 
 <script>
-// SCET Frontend - Inline JavaScript v3.0
-(function() {
-    const API_BASE = '/api/v1';
+(function(){
+    var API = '/api/v1';
+    var searchBtn = document.getElementById('searchBtn');
+    var searchInput = document.getElementById('searchInput');
+    var loading = document.getElementById('loading');
+    var results = document.getElementById('results');
+    var resultsList = document.getElementById('resultsList');
+    var tagSection = document.getElementById('tagSection');
+    var tagContainer = document.getElementById('tagContainer');
+    var jurisdiction = document.getElementById('jurisdiction');
     
-    // Wait for DOM
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+    console.log('SCET v4 loaded');
+    
+    searchBtn.onclick = search;
+    searchInput.onkeypress = function(e){ if(e.key==='Enter') search(); };
+    
+    function search(){
+        var q = searchInput.value.trim();
+        if(!q){ alert('Enter search term'); return; }
+        
+        loading.className = 'loading';
+        results.className = 'search-results hidden';
+        tagSection.className = 'smart-tag-section hidden';
+        
+        fetch(API + '/search?q=' + encodeURIComponent(q) + '&jurisdiction=' + jurisdiction.value)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                loading.className = 'loading hidden';
+                showResults(data.results || []);
+            })
+            .catch(function(err){
+                loading.className = 'loading hidden';
+                resultsList.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
+                results.className = 'search-results';
+            });
     }
     
-    function init() {
-        console.log('SCET v3.0 initialized');
-        
-        const searchBtn = document.getElementById('searchBtn');
-        const searchInput = document.getElementById('searchInput');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const searchResults = document.getElementById('searchResults');
-        const resultsList = document.getElementById('resultsList');
-        const smartTagSection = document.getElementById('smartTagSection');
-        const smartTagContainer = document.getElementById('smartTagContainer');
-        const contentType = document.getElementById('contentType');
-        const jurisdiction = document.getElementById('jurisdiction');
-        
-        if (!searchBtn || !searchInput) {
-            console.error('Required elements not found');
-            return;
-        }
-        
-        searchBtn.onclick = doSearch;
-        searchInput.onkeypress = function(e) {
-            if (e.key === 'Enter') doSearch();
-        };
-        
-        async function doSearch() {
-            const query = searchInput.value.trim();
-            if (!query) {
-                alert('Please enter a search term');
-                return;
+    function showResults(items){
+        if(items.length === 0){
+            resultsList.innerHTML = '<p>No results found</p>';
+        } else {
+            var html = '';
+            for(var i=0; i<items.length; i++){
+                var r = items[i];
+                html += '<div class="result-item" data-i="'+i+'">';
+                html += '<div class="result-info"><div class="result-title">'+esc(r.title)+'</div>';
+                html += '<div class="result-meta">'+(r.creator||'Unknown')+' • '+(r.publication_year||'?')+' • '+r.source+'</div></div>';
+                html += '<div class="result-score"><span class="status-badge">'+r.copyright_status+'</span></div></div>';
             }
+            resultsList.innerHTML = html;
+            window._results = items;
             
-            loadingIndicator.classList.remove('hidden');
-            searchResults.classList.add('hidden');
-            smartTagSection.classList.add('hidden');
-            
-            try {
-                const params = new URLSearchParams({
-                    q: query,
-                    content_type: contentType.value || '',
-                    jurisdiction: jurisdiction.value || 'US'
-                });
-                
-                console.log('Searching:', API_BASE + '/search?' + params);
-                const response = await fetch(API_BASE + '/search?' + params);
-                
-                if (!response.ok) throw new Error('Search failed: ' + response.status);
-                
-                const data = await response.json();
-                console.log('Results:', data);
-                
-                showResults(data.results || []);
-            } catch (error) {
-                console.error('Search error:', error);
-                resultsList.innerHTML = '<p style="color:red;padding:20px;">Search failed: ' + error.message + '</p>';
-                searchResults.classList.remove('hidden');
-            } finally {
-                loadingIndicator.classList.add('hidden');
+            var els = document.querySelectorAll('.result-item');
+            for(var j=0; j<els.length; j++){
+                els[j].onclick = function(){
+                    var idx = parseInt(this.getAttribute('data-i'));
+                    getTag(window._results[idx]);
+                };
             }
         }
+        results.className = 'search-results';
+    }
+    
+    function getTag(item){
+        loading.className = 'loading';
+        var url = API + '/tag/detailed?title=' + encodeURIComponent(item.title) + 
+                  '&year=' + (item.publication_year||'') + 
+                  '&jurisdiction=' + jurisdiction.value;
         
-        function showResults(results) {
-            if (results.length === 0) {
-                resultsList.innerHTML = '<p style="padding:20px;">No results found.</p>';
-            } else {
-                resultsList.innerHTML = results.map(function(r, i) {
-                    return '<div class="result-item" data-index="' + i + '">' +
-                        '<div class="result-info">' +
-                        '<div class="result-title">' + escapeHtml(r.title) + '</div>' +
-                        '<div class="result-meta">' +
-                        (r.creator ? 'By ' + escapeHtml(r.creator) + ' • ' : '') +
-                        (r.publication_year || 'Unknown year') + ' • ' +
-                        (r.source || 'Unknown source') +
-                        '</div></div>' +
-                        '<div class="result-score">' +
-                        '<span class="score-badge">' + Math.round((r.similarity_score || 0.5) * 100) + '% match</span>' +
-                        '<span class="status-badge ' + (r.copyright_status || '').toLowerCase().replace(' ', '_') + '">' + (r.copyright_status || 'Unknown') + '</span>' +
-                        '</div></div>';
-                }).join('');
-                
-                // Store results and add click handlers
-                window._searchResults = results;
-                document.querySelectorAll('.result-item').forEach(function(el) {
-                    el.onclick = function() {
-                        var idx = parseInt(el.getAttribute('data-index'));
-                        selectResult(window._searchResults[idx]);
-                    };
-                });
-            }
-            searchResults.classList.remove('hidden');
-        }
-        
-        async function selectResult(result) {
-            loadingIndicator.classList.remove('hidden');
-            
-            try {
-                const params = new URLSearchParams({
-                    title: result.title || '',
-                    creator: result.creator || '',
-                    year: result.publication_year || '',
-                    type: result.content_type || '',
-                    jurisdiction: jurisdiction.value || 'US'
-                });
-                
-                const response = await fetch(API_BASE + '/tag/detailed?' + params);
-                if (!response.ok) throw new Error('Tag generation failed');
-                
-                const data = await response.json();
-                showTag(data);
-            } catch (error) {
-                console.error('Tag error:', error);
-                smartTagContainer.innerHTML = '<p style="color:red;">Failed to generate tag: ' + error.message + '</p>';
-                smartTagSection.classList.remove('hidden');
-            } finally {
-                loadingIndicator.classList.add('hidden');
-            }
-        }
-        
-        function showTag(data) {
-            const tag = data.tag;
-            const statusColor = tag.status === 'PUBLIC_DOMAIN' ? 'green' : 'red';
-            const statusEmoji = tag.status === 'PUBLIC_DOMAIN' ? '🌍' : '🔒';
-            
-            smartTagContainer.innerHTML = 
-                '<div class="smart-tag status-' + statusColor + '">' +
-                '<div class="tag-header">' +
-                '<span class="tag-emoji">' + statusEmoji + '</span>' +
-                '<span class="tag-status">' + (tag.status_text || tag.status) + '</span>' +
-                '</div>' +
-                '<div class="tag-title">' + escapeHtml(tag.title) + '</div>' +
-                (tag.creator ? '<div class="tag-creator">By ' + escapeHtml(tag.creator) + '</div>' : '') +
-                '<div class="tag-timeline">' +
-                '<span>⏱</span>' +
-                '<span>' + escapeHtml(tag.expiry_info || tag.expiry_timeline || 'Unknown') + '</span>' +
-                '</div>' +
-                '<div class="tag-uses">' +
-                '<h4>📋 Allowed Uses</h4>' +
-                '<div class="uses-list">' +
-                (tag.allowed_uses || []).map(function(use) {
-                    return '<span class="use-item">' + escapeHtml(use) + '</span>';
-                }).join('') +
-                '</div></div>' +
-                '<div class="tag-confidence">' +
-                '<span>🎯 Confidence: ' + Math.round((tag.confidence || 0.8) * 100) + '%</span>' +
-                '</div>' +
-                (tag.ai_reasoning ? '<div class="tag-reasoning"><p>🤖 ' + escapeHtml(tag.ai_reasoning) + '</p></div>' : '') +
-                '<div class="tag-disclaimer">⚠️ This analysis is for informational purposes only.</div>' +
-                '</div>';
-            
-            smartTagSection.classList.remove('hidden');
-            smartTagSection.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function escapeHtml(text) {
-            if (!text) return '';
-            var div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        fetch(url)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                loading.className = 'loading hidden';
+                showTag(data.tag);
+            })
+            .catch(function(err){
+                loading.className = 'loading hidden';
+                tagContainer.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
+                tagSection.className = 'smart-tag-section';
+            });
+    }
+    
+    function showTag(tag){
+        var color = tag.status === 'PUBLIC_DOMAIN' ? 'green' : 'red';
+        var emoji = tag.status === 'PUBLIC_DOMAIN' ? '🌍' : '🔒';
+        tagContainer.innerHTML = 
+            '<div class="smart-tag status-'+color+'">' +
+            '<div class="tag-header"><span class="tag-emoji">'+emoji+'</span><span class="tag-status">'+tag.status+'</span></div>' +
+            '<div class="tag-title">'+esc(tag.title)+'</div>' +
+            '<div class="tag-timeline">⏱ '+(tag.expiry_info||tag.expiry_timeline||'Unknown')+'</div>' +
+            '<div class="tag-uses"><strong>Allowed:</strong> '+(tag.allowed_uses||[]).join(', ')+'</div>' +
+            '<div class="tag-confidence">🎯 Confidence: '+Math.round((tag.confidence||0.8)*100)+'%</div>' +
+            '</div>';
+        tagSection.className = 'smart-tag-section';
+        tagSection.scrollIntoView({behavior:'smooth'});
+    }
+    
+    function esc(s){ 
+        if(!s) return ''; 
+        var d = document.createElement('div'); 
+        d.textContent = s; 
+        return d.innerHTML; 
     }
 })();
 </script>
