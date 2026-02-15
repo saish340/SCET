@@ -3,150 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCET - Copyright Status Tag v5</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>SCET - Copyright Status Tag</title>
+    <link rel="stylesheet" href="css/styles.css?v=2.0.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
+        <!-- Header -->
         <header class="header">
             <div class="logo">
                 <span class="logo-icon">📜</span>
                 <h1>SCET</h1>
                 <span class="tagline">Copyright Status Tag</span>
             </div>
+            <nav class="nav-links">
+                <a href="#search" class="active">Search</a>
+                <a href="#about">About</a>
+                <a href="#api">API</a>
+            </nav>
         </header>
 
+        <!-- Main Content -->
         <main class="main-content">
+            <!-- Hero Section -->
             <section class="hero">
                 <h2>AI-Powered Copyright Analysis</h2>
-                <p>Search for any creative work and get instant copyright status</p>
+                <p>Search for any creative work and get instant copyright status, allowed uses, and expiry information</p>
             </section>
 
+            <!-- Search Section -->
             <section id="search" class="search-section">
                 <div class="search-box">
                     <div class="search-input-container">
-                        <input type="text" id="searchInput" placeholder="Search (e.g., Harry Potter, Romeo and Juliet)">
-                        <button id="searchBtn" class="search-btn">🔍 Search</button>
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Search copyright status by title (e.g., 'Harry Potter', 'Romeo and Juliet')"
+                            autocomplete="off"
+                        >
+                        <button id="searchBtn" class="search-btn">
+                            <span class="btn-icon">🔍</span>
+                            Search
+                        </button>
                     </div>
                     <div class="search-options">
-                        <select id="contentType"><option value="">All Types</option><option value="book">Books</option></select>
-                        <select id="jurisdiction"><option value="US">🇺🇸 US</option><option value="IN">🇮🇳 India</option></select>
+                        <select id="contentType">
+                            <option value="">All Types</option>
+                            <optgroup label="📚 Creative Works">
+                                <option value="book">📚 Books</option>
+                                <option value="music">🎵 Music</option>
+                                <option value="film">🎬 Films</option>
+                                <option value="article">📄 Articles</option>
+                                <option value="artwork">🎨 Artwork</option>
+                            </optgroup>
+                            <optgroup label="💻 Software & Code">
+                                <option value="software">💻 Software</option>
+                                <option value="code">📦 Code/Library</option>
+                            </optgroup>
+                            <optgroup label="🚀 Innovation & Projects">
+                                <option value="project">🚀 Projects</option>
+                                <option value="innovation">💡 Innovation</option>
+                                <option value="drone">🤖 Drones/Robotics</option>
+                                <option value="technology">🔬 Technology</option>
+                                <option value="research_project">🔬 Research Projects</option>
+                            </optgroup>
+                            <optgroup label="🏢 Companies & Startups">
+                                <option value="startup">🚀 Startups</option>
+                                <option value="company">🏢 Companies</option>
+                            </optgroup>
+                            <optgroup label="⚖️ Intellectual Property">
+                                <option value="patent">📜 Patents</option>
+                                <option value="trademark">®️ Trademarks</option>
+                            </optgroup>
+                            <optgroup label="📑 Academic & Research">
+                                <option value="academic_paper">📑 Academic Papers</option>
+                            </optgroup>
+                        </select>
+                        <select id="jurisdiction">
+                            <option value="">🌍 All Countries</option>
+                            <option value="US">🇺🇸 United States</option>
+                            <option value="EU">🇪🇺 European Union</option>
+                            <option value="UK">🇬🇧 United Kingdom</option>
+                            <option value="CA">🇨🇦 Canada</option>
+                            <option value="AU">🇦🇺 Australia</option>
+                            <option value="JP">🇯🇵 Japan</option>
+                            <option value="IN">🇮🇳 India</option>
+                        </select>
                     </div>
                 </div>
-                <div id="loading" class="loading hidden"><div class="spinner"></div><span>Searching...</span></div>
-                <div id="results" class="search-results hidden"><h3>Results</h3><div id="resultsList"></div></div>
-                <div id="tagSection" class="smart-tag-section hidden"><h3>Copyright Status</h3><div id="tagContainer"></div></div>
+
+                <!-- Spell Correction Notice -->
+                <div id="correctionNotice" class="correction-notice hidden">
+                    <span>Did you mean: </span>
+                    <a href="#" id="correctedQuery"></a>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="loading hidden">
+                    <div class="spinner"></div>
+                    <span>Searching with AI...</span>
+                </div>
+
+                <!-- AI Explanation -->
+                <div id="aiExplanation" class="ai-explanation hidden">
+                    <span class="ai-icon">🤖</span>
+                    <p id="aiExplanationText"></p>
+                </div>
+
+                <!-- Search Results -->
+                <div id="searchResults" class="search-results hidden">
+                    <h3>Search Results</h3>
+                    <div id="resultsList" class="results-list"></div>
+                </div>
+
+                <!-- Suggestions -->
+                <div id="suggestions" class="suggestions hidden">
+                    <span>Related searches: </span>
+                    <div id="suggestionsList"></div>
+                </div>
+            </section>
+
+            <!-- Copyright Status Tag Display -->
+            <section id="smartTagSection" class="smart-tag-section hidden">
+                <h3>Copyright Status</h3>
+                <div id="smartTagContainer" class="smart-tag-container"></div>
+            </section>
+
+            <!-- About Section -->
+            <section id="about" class="about-section">
+                <h2>About SCET</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon">🔍</span>
+                        <h4>AI-Based Title Search</h4>
+                        <p>Intelligent search with spell correction, fuzzy matching, and semantic understanding. Works with partial titles and misspellings.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🌐</span>
+                        <h4>Live Data Collection</h4>
+                        <p>Dynamically collects metadata from Open Library, Wikipedia, MusicBrainz, and more. No static datasets used.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🧠</span>
+                        <h4>Machine Learning</h4>
+                        <p>Self-improving ML model that learns from searches and feedback. Accuracy increases over time.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">⚖️</span>
+                        <h4>Legal Rule Engine</h4>
+                        <p>Applies copyright rules based on jurisdiction, publication year, and creator status.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">📊</span>
+                        <h4>Confidence Scoring</h4>
+                        <p>Every analysis includes a confidence score so you know how reliable the prediction is.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🔄</span>
+                        <h4>Auto-Updating</h4>
+                        <p>Tags automatically update as data is verified and copyright status changes.</p>
+                    </div>
+                </div>
+
+                <div class="novelty-statement">
+                    <h4>📋 Novelty Statement</h4>
+                    <p>
+                        "This system does not rely on pre-existing datasets. It uses AI-based live data acquisition 
+                        and machine learning to dynamically infer copyright status and expiry, making it adaptive, 
+                        scalable, and legally informative."
+                    </p>
+                </div>
             </section>
         </main>
 
-        <footer class="footer"><p>© 2026 SCET</p></footer>
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>SCET System</h4>
+                    <p>Research-grade AI system for copyright analysis</p>
+                </div>
+                <div class="footer-section">
+                    <h4>API Documentation</h4>
+                    <a href="http://localhost:8000/docs" target="_blank">Swagger UI</a>
+                    <a href="http://localhost:8000/redoc" target="_blank">ReDoc</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Disclaimer</h4>
+                    <p class="disclaimer-text">This tool provides informational analysis only and does not constitute legal advice.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 SCET - Copyright Status Tag System</p>
+            </div>
+        </footer>
     </div>
 
-<script>
-(function(){
-    var API = '/api/v1';
-    var searchBtn = document.getElementById('searchBtn');
-    var searchInput = document.getElementById('searchInput');
-    var loading = document.getElementById('loading');
-    var results = document.getElementById('results');
-    var resultsList = document.getElementById('resultsList');
-    var tagSection = document.getElementById('tagSection');
-    var tagContainer = document.getElementById('tagContainer');
-    var jurisdiction = document.getElementById('jurisdiction');
-    
-    console.log('SCET v4 loaded');
-    
-    searchBtn.onclick = search;
-    searchInput.onkeypress = function(e){ if(e.key==='Enter') search(); };
-    
-    function search(){
-        var q = searchInput.value.trim();
-        if(!q){ alert('Enter search term'); return; }
-        
-        loading.className = 'loading';
-        results.className = 'search-results hidden';
-        tagSection.className = 'smart-tag-section hidden';
-        
-        fetch(API + '/search?q=' + encodeURIComponent(q) + '&jurisdiction=' + jurisdiction.value)
-            .then(function(r){ return r.json(); })
-            .then(function(data){
-                loading.className = 'loading hidden';
-                showResults(data.results || []);
-            })
-            .catch(function(err){
-                loading.className = 'loading hidden';
-                resultsList.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
-                results.className = 'search-results';
-            });
-    }
-    
-    function showResults(items){
-        if(items.length === 0){
-            resultsList.innerHTML = '<p>No results found</p>';
-        } else {
-            var html = '';
-            for(var i=0; i<items.length; i++){
-                var r = items[i];
-                html += '<div class="result-item" data-i="'+i+'">';
-                html += '<div class="result-info"><div class="result-title">'+esc(r.title)+'</div>';
-                html += '<div class="result-meta">'+(r.creator||'Unknown')+' • '+(r.publication_year||'?')+' • '+r.source+'</div></div>';
-                html += '<div class="result-score"><span class="status-badge">'+r.copyright_status+'</span></div></div>';
-            }
-            resultsList.innerHTML = html;
-            window._results = items;
-            
-            var els = document.querySelectorAll('.result-item');
-            for(var j=0; j<els.length; j++){
-                els[j].onclick = function(){
-                    var idx = parseInt(this.getAttribute('data-i'));
-                    getTag(window._results[idx]);
-                };
-            }
-        }
-        results.className = 'search-results';
-    }
-    
-    function getTag(item){
-        loading.className = 'loading';
-        var url = API + '/tag/detailed?title=' + encodeURIComponent(item.title) + 
-                  '&year=' + (item.publication_year||'') + 
-                  '&jurisdiction=' + jurisdiction.value;
-        
-        fetch(url)
-            .then(function(r){ return r.json(); })
-            .then(function(data){
-                loading.className = 'loading hidden';
-                showTag(data.tag);
-            })
-            .catch(function(err){
-                loading.className = 'loading hidden';
-                tagContainer.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
-                tagSection.className = 'smart-tag-section';
-            });
-    }
-    
-    function showTag(tag){
-        var color = tag.status === 'PUBLIC_DOMAIN' ? 'green' : 'red';
-        var emoji = tag.status === 'PUBLIC_DOMAIN' ? '🌍' : '🔒';
-        tagContainer.innerHTML = 
-            '<div class="smart-tag status-'+color+'">' +
-            '<div class="tag-header"><span class="tag-emoji">'+emoji+'</span><span class="tag-status">'+tag.status+'</span></div>' +
-            '<div class="tag-title">'+esc(tag.title)+'</div>' +
-            '<div class="tag-timeline">⏱ '+(tag.expiry_info||tag.expiry_timeline||'Unknown')+'</div>' +
-            '<div class="tag-uses"><strong>Allowed:</strong> '+(tag.allowed_uses||[]).join(', ')+'</div>' +
-            '<div class="tag-confidence">🎯 Confidence: '+Math.round((tag.confidence||0.8)*100)+'%</div>' +
-            '</div>';
-        tagSection.className = 'smart-tag-section';
-        tagSection.scrollIntoView({behavior:'smooth'});
-    }
-    
-    function esc(s){ 
-        if(!s) return ''; 
-        var d = document.createElement('div'); 
-        d.textContent = s; 
-        return d.innerHTML; 
-    }
-})();
-</script>
+    <script src="js/app.js"></script>
 </body>
 </html>
