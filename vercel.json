@@ -1,7 +1,21 @@
 {
   "version": 2,
   "public": true,
+  "trailingSlash": false,
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/home.html"
+    }
+  ],
   "headers": [
+    {
+      "source": "/home.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
     {
       "source": "/index.html",
       "headers": [
