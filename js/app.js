@@ -222,7 +222,7 @@ function displayDetailedSmartTag(data) {
     const riskIcon = risk.icon || (risk.level === 'low' || risk.level === 'Low' ? '✅' : '⚠️');
     const riskDesc = risk.description || `Risk level: ${risk.level}`;
     const riskHtml = `
-        <div class="risk-assessment" style="border-left: 4px solid ${riskColor}">`
+        <div class="risk-assessment" style="border-left: 4px solid ${riskColor}">
             <div class="risk-header">
                 <span class="risk-icon">${riskIcon}</span>
                 <span class="risk-level" style="color: ${riskColor}">${risk.level} Risk</span>
