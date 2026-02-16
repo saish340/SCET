@@ -1,7 +1,7 @@
 """
 SCET API for Vercel Serverless
 Copyright Status Tag - Simplified version for serverless deployment
-Version: 1.1.0 - Updated tag fields
+Version: 1.2.0 - Added real text similarity matching
 """
 from http.server import BaseHTTPRequestHandler
 import json
@@ -20,6 +20,45 @@ def clean_html(text):
     if not text:
         return ""
     return re.sub(r'<[^>]+>', '', text).strip()
+
+def calculate_text_similarity(query, text):
+    """
+    Calculate similarity score between query and text using word overlap
+    Returns a score between 0 and 1
+    """
+    if not query or not text:
+        return 0.0
+    
+    # Normalize to lowercase and remove special chars
+    query = re.sub(r'[^\w\s]', ' ', query.lower())
+    text = re.sub(r'[^\w\s]', ' ', text.lower())
+    
+    # Split into words and remove common stop words
+    stop_words = {'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'and', 'or', 'but', 'is', 'are', 'was', 'were'}
+    query_words = set(w for w in query.split() if w not in stop_words and len(w) > 2)
+    text_words = set(w for w in text.split() if w not in stop_words and len(w) > 2)
+    
+    if not query_words:
+        return 0.5  # Default mid score if no meaningful query words
+    
+    # Calculate Jaccard similarity (intersection over union)
+    intersection = len(query_words & text_words)
+    union = len(query_words | text_words)
+    
+    if union == 0:
+        return 0.0
+    
+    jaccard = intersection / union
+    
+    # Bonus for exact phrase matches
+    if query.lower() in text.lower():
+        jaccard = min(1.0, jaccard + 0.3)
+    
+    # Bonus for all query words present
+    if query_words.issubset(text_words):
+        jaccard = min(1.0, jaccard + 0.2)
+    
+    return round(jaccard, 2)
 
 def make_request(url):
     """Make HTTP request with proper headers"""
@@ -48,17 +87,26 @@ def search_openlibrary(query):
             data = json.loads(resp.read().decode())
             for i, doc in enumerate(data.get('docs', [])[:5]):
                 year = doc.get('first_publish_year')
-                results.append({
-                    "id": f"ol_{i}",
-                    "title": doc.get('title', ''),
-                    "creator": ', '.join(doc.get('author_name', [])[:2]) if doc.get('author_name') else None,
-                    "publication_year": year,
-                    "content_type": "book",
-                    "source": "Open Library",
-                    "source_url": f"https://openlibrary.org{doc.get('key', '')}",
-                    "copyright_status": get_copyright_status(year),
-                    "similarity_score": 0.85 - (i * 0.05)
-                })
+                title = doc.get('title', '')
+                author = ', '.join(doc.get('author_name', [])[:2]) if doc.get('author_name') else ''
+                
+                # Calculate real similarity based on title and author match
+                text_to_match = f"{title} {author}"
+                similarity = calculate_text_similarity(query, text_to_match)
+                
+                # Only include if similarity is above threshold (30%)
+                if similarity >= 0.3:
+                    results.append({
+                        "id": f"ol_{i}",
+                        "title": title,
+                        "creator": author if author else None,
+                        "publication_year": year,
+                        "content_type": "book",
+                        "source": "Open Library",
+                        "source_url": f"https://openlibrary.org{doc.get('key', '')}",
+                        "copyright_status": get_copyright_status(year),
+                        "similarity_score": similarity
+                    })
     except Exception as e:
         print(f"OpenLibrary error: {e}")
     return results
@@ -72,17 +120,25 @@ def search_wikipedia(query):
             for i, item in enumerate(data.get('query', {}).get('search', [])[:5]):
                 snippet = clean_html(item.get('snippet', ''))
                 year = extract_year(snippet)
-                results.append({
-                    "id": f"wiki_{i}",
-                    "title": item.get('title', ''),
-                    "publication_year": year,
-                    "content_type": "article",
-                    "source": "Wikipedia",
-                    "source_url": f"https://en.wikipedia.org/wiki/{item.get('title', '').replace(' ', '_')}",
-                    "description": snippet[:200],
-                    "copyright_status": get_copyright_status(year),
-                    "similarity_score": 0.75 - (i * 0.05)
-                })
+                title = item.get('title', '')
+                
+                # Calculate real similarity based on title and snippet
+                text_to_match = f"{title} {snippet}"
+                similarity = calculate_text_similarity(query, text_to_match)
+                
+                # Only include if similarity is above threshold (30%)
+                if similarity >= 0.3:
+                    results.append({
+                        "id": f"wiki_{i}",
+                        "title": title,
+                        "publication_year": year,
+                        "content_type": "article",
+                        "source": "Wikipedia",
+                        "source_url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                        "description": snippet[:200],
+                        "copyright_status": get_copyright_status(year),
+                        "similarity_score": similarity
+                    })
     except Exception as e:
         print(f"Wikipedia error: {e}")
     return results
