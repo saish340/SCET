@@ -431,7 +431,25 @@ body {
     box-shadow: var(--shadow-md);
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.result-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.result-card:hover::before {
+    opacity: 1;
 }
 
 .result-card:hover {
@@ -465,43 +483,63 @@ body {
     gap: var(--space-2);
     flex-wrap: wrap;
     margin-top: var(--space-2);
+    align-items: center;
+}
+
+.result-year,
+.result-type,
+.result-source {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    background: var(--bg-dark-tertiary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
 }
 
 .result-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: var(--radius-full);
     font-size: 12px;
     font-weight: 600;
+    border: 1px solid transparent;
 }
 
 .badge-protected {
-    background: #fee2e2;
-    color: #dc2626;
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
 .badge-public {
-    background: #d1fae5;
-    color: #059669;
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
 }
 
 .badge-unknown {
-    background: var(--bg-gray-light);
-    color: var(--text-secondary);
+    background: rgba(156, 163, 175, 0.15);
+    color: var(--text-tertiary);
+    border-color: var(--border-color);
 }
 
 .similarity-score {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: var(--radius-full);
     font-size: 12px;
     font-weight: 600;
-    background: #eff6ff;
-    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 /* ============================================

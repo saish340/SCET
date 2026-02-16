@@ -117,24 +117,27 @@ function displaySearchResults(data) {
 // Create Result Element
 function createResultElement(result) {
     const div = document.createElement('div');
-    div.className = 'result-item';
+    div.className = 'result-card';
     div.onclick = () => selectResult(result);
     
     const statusClass = result.copyright_status.toLowerCase().replace(' ', '_');
+    const statusBadgeClass = result.copyright_status === 'PROTECTED' ? 'badge-protected' : 
+                             result.copyright_status === 'PUBLIC_DOMAIN' ? 'badge-public' : 
+                             'badge-unknown';
     
     div.innerHTML = `
-        <div class="result-info">
-            <div class="result-title">${escapeHtml(result.title)}</div>
-            <div class="result-meta">
-                ${result.creator ? `By ${escapeHtml(result.creator)} • ` : ''}
-                ${result.publication_year ? `${result.publication_year} • ` : ''}
-                ${result.content_type ? capitalizeFirst(result.content_type) : 'Unknown type'}
-                ${result.source ? ` • Source: ${escapeHtml(result.source)}` : ''}
+        <div class="result-header">
+            <div>
+                <div class="result-title">${escapeHtml(result.title)}</div>
+                ${result.creator ? `<div class="result-creator">By ${escapeHtml(result.creator)}</div>` : ''}
             </div>
         </div>
-        <div class="result-score">
-            <span class="score-badge">${Math.round(result.similarity_score * 100)}% match</span>
-            <span class="status-badge ${statusClass}">${formatStatus(result.copyright_status)}</span>
+        <div class="result-meta">
+            ${result.publication_year ? `<span class="result-year">📅 ${result.publication_year}</span>` : ''}
+            ${result.content_type ? `<span class="result-type">📑 ${capitalizeFirst(result.content_type)}</span>` : ''}
+            ${result.source ? `<span class="result-source">📚 ${escapeHtml(result.source)}</span>` : ''}
+            <span class="result-badge ${statusBadgeClass}">${formatStatus(result.copyright_status)}</span>
+            <span class="similarity-score">🎯 ${Math.round(result.similarity_score * 100)}% match</span>
         </div>
     `;
     
