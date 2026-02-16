@@ -352,29 +352,63 @@ class handler(BaseHTTPRequestHandler):
         elif path == '/api/v1/search':
             q = params.get('q', '')
             jurisdiction = params.get('jurisdiction', 'US')
+            source = params.get('source', '')  # Optional source filter
             
-            # Search all sources including government databases
+            # Search sources based on filter
             results = []
-            results.extend(search_openlibrary(q))
-            results.extend(search_wikipedia(q))
             
-            # Add government copyright database searches based on jurisdiction
-            if jurisdiction == 'US' or not jurisdiction:
-                results.extend(search_us_copyright(q))
-            if jurisdiction == 'IN':
-                results.extend(search_indian_copyright(q))
-            if jurisdiction == 'EU':
-                results.extend(search_eu_trademark(q))
-            
-            # Always include US Copyright Office as primary source
-            if jurisdiction not in ['US', '']:
-                results.extend(search_us_copyright(q))
+            # If no source filter or 'all', search all sources
+            if not source or source == 'all':
+                results.extend(search_openlibrary(q))
+                results.extend(search_wikipedia(q))
+                
+                # Add government copyright database searches based on jurisdiction
+                if jurisdiction == 'US' or not jurisdiction:
+                    results.extend(search_us_copyright(q))
+                if jurisdiction == 'IN':
+                    results.extend(search_indian_copyright(q))
+                if jurisdiction == 'EU':
+                    results.extend(search_eu_trademark(q))
+                
+                # Always include US Copyright Office as primary source
+                if jurisdiction not in ['US', '']:
+                    results.extend(search_us_copyright(q))
+            else:
+                # Search specific source only
+                source_lower = source.lower()
+                
+                if 'open library' in source_lower:
+                    results.extend(search_openlibrary(q))
+                elif 'wikipedia' in source_lower:
+                    results.extend(search_wikipedia(q))
+                elif 'us copyright' in source_lower:
+                    results.extend(search_us_copyright(q))
+                elif 'indian copyright' in source_lower:
+                    results.extend(search_indian_copyright(q))
+                elif 'eu' in source_lower or 'intellectual property' in source_lower:
+                    results.extend(search_eu_trademark(q))
+                else:
+                    # For YouTube, Spotify, Netflix, Apple Music, etc.
+                    # Search all sources but filter by the source field in results
+                    results.extend(search_openlibrary(q))
+                    results.extend(search_wikipedia(q))
+                    
+                    if jurisdiction == 'US' or not jurisdiction:
+                        results.extend(search_us_copyright(q))
+                    if jurisdiction == 'IN':
+                        results.extend(search_indian_copyright(q))
+                    if jurisdiction == 'EU':
+                        results.extend(search_eu_trademark(q))
+                    
+                    # Filter results by source field
+                    results = [r for r in results if source.lower() in r.get('source', '').lower()]
             
             results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
             response = {
                 "query": q,
                 "results": results[:15],
                 "total_results": len(results),
+                "source_filter": source if source else "all",
                 "sources_searched": ["Open Library", "Wikipedia", "US Copyright Office", 
                                     "Indian Copyright Office" if jurisdiction == "IN" else None,
                                     "EU IPO" if jurisdiction == "EU" else None]

@@ -15,6 +15,7 @@ const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const contentType = document.getElementById('contentType');
 const jurisdiction = document.getElementById('jurisdiction');
+const metadataSource = document.getElementById('metadataSource');
 const correctionNotice = document.getElementById('correctionNotice');
 const correctedQuery = document.getElementById('correctedQuery');
 const loadingIndicator = document.getElementById('loadingIndicator');
@@ -56,7 +57,8 @@ async function performSearch() {
         const params = new URLSearchParams({
             q: query,
             jurisdiction: jurisdiction.value || 'US',
-            type: contentType.value || ''
+            type: contentType.value || '',
+            source: metadataSource.value || ''
         });
         
         // Fetch search results
