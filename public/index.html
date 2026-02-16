@@ -117,8 +117,61 @@
 
                     <!-- Search Results -->
                     <div id="searchResults" class="search-results hidden">
-                        <h3 class="results-heading">Search Results</h3>
-                        <div id="resultsList" class="results-list"></div>
+                        <div class="results-container">
+                            <div class="results-main">
+                                <h3 class="results-heading">Search Results</h3>
+                                <div id="resultsList" class="results-list"></div>
+                            </div>
+                            
+                            <!-- Quick Searches Sidebar -->
+                            <div class="quick-searches-box">
+                                <h4 class="quick-searches-title">🔍 Quick Searches</h4>
+                                <div class="quick-searches-grid">
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Harry Potter';performSearch();">
+                                        📚 Harry Potter
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Star Wars';performSearch();">
+                                        🎬 Star Wars
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Beatles';performSearch();">
+                                        🎵 The Beatles
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Romeo and Juliet';performSearch();">
+                                        📖 Romeo & Juliet
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Mona Lisa';performSearch();">
+                                        🎨 Mona Lisa
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Alice in Wonderland';performSearch();">
+                                        📕 Alice in Wonderland
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Titanic movie';performSearch();">
+                                        🎥 Titanic
+                                    </button>
+                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Pride and Prejudice';performSearch();">
+                                        📗 Pride & Prejudice
+                                    </button>
+                                </div>
+                                
+                                <div class="quick-searches-divider"></div>
+                                
+                                <h4 class="quick-searches-subtitle">By Category</h4>
+                                <div class="category-buttons">
+                                    <button class="category-btn" onclick="document.getElementById('contentType').value='book';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for books...';">
+                                        📚 Books
+                                    </button>
+                                    <button class="category-btn" onclick="document.getElementById('contentType').value='film';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for films...';">
+                                        🎬 Films
+                                    </button>
+                                    <button class="category-btn" onclick="document.getElementById('contentType').value='music';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for music...';">
+                                        🎵 Music
+                                    </button>
+                                    <button class="category-btn" onclick="document.getElementById('contentType').value='artwork';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for artwork...';">
+                                        🎨 Art
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Suggestions -->
