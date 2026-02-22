@@ -34,87 +34,90 @@
             <!-- Hero Section -->
             <section class="hero" id="home">
                 <div class="hero-container">
-                    <h1 class="hero-title">Copyright Status Search System</h1>
-                    <p class="hero-subtitle">Search and verify copyright ownership, status, and expiry instantly using AI</p>
+                    <h1 class="hero-title-large">AI-Powered Copyright Status Verification</h1>
+                    <p class="hero-subtitle-large">Search and validate copyright ownership, protection status, and expiry instantly using intelligent metadata analysis.</p>
                 </div>
             </section>
 
             <!-- Search Section -->
-            <section id="search" class="search-section">
+            <section id="search" class="search-section-home">
                 <div class="search-container">
-                    <div class="search-box">
-                        <div class="search-input-wrapper">
-                            <input 
-                                type="text" 
-                                id="searchInput" 
-                                class="search-input"
-                                placeholder="Search copyright status by title (e.g., 'Harry Potter', 'Romeo and Juliet')"
-                                autocomplete="off"
-                            >
-                            <button id="searchBtn" class="search-btn">
-                                <span class="btn-icon">🔍</span>
-                                <span class="btn-text">Search</span>
-                            </button>
+                    <div class="search-box-prominent">
+                        <div class="search-box">
+                            <div class="search-input-wrapper">
+                                <input 
+                                    type="text" 
+                                    id="searchInput" 
+                                    class="search-input"
+                                    placeholder="Search copyright status by title (e.g., 'Harry Potter', 'Romeo and Juliet')"
+                                    autocomplete="off"
+                                >
+                                <button id="searchBtn" class="search-btn">
+                                    <span class="btn-icon">🔍</span>
+                                    <span class="btn-text">Search</span>
+                                </button>
+                            </div>
+                            <div class="search-options">
+                                <select id="contentType" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <optgroup label="📚 Creative Works">
+                                        <option value="book">📚 Books</option>
+                                        <option value="music">🎵 Music</option>
+                                        <option value="film">🎬 Films</option>
+                                        <option value="article">📄 Articles</option>
+                                        <option value="artwork">🎨 Artwork</option>
+                                    </optgroup>
+                                    <optgroup label="💻 Software & Code">
+                                        <option value="software">💻 Software</option>
+                                        <option value="code">📦 Code/Library</option>
+                                    </optgroup>
+                                    <optgroup label="🚀 Innovation & Projects">
+                                        <option value="project">🚀 Projects</option>
+                                        <option value="innovation">💡 Innovation</option>
+                                        <option value="drone">🤖 Drones/Robotics</option>
+                                        <option value="technology">🔬 Technology</option>
+                                        <option value="research_project">🔬 Research Projects</option>
+                                    </optgroup>
+                                    <optgroup label="🏢 Companies & Startups">
+                                        <option value="startup">🚀 Startups</option>
+                                        <option value="company">🏢 Companies</option>
+                                    </optgroup>
+                                    <optgroup label="⚖️ Intellectual Property">
+                                        <option value="patent">📜 Patents</option>
+                                        <option value="trademark">®️ Trademarks</option>
+                                    </optgroup>
+                                    <optgroup label="📑 Academic & Research">
+                                        <option value="academic_paper">📑 Academic Papers</option>
+                                    </optgroup>
+                                </select>
+                                <select id="jurisdiction" class="filter-select">
+                                    <option value="">🌍 All Countries</option>
+                                    <option value="US">🇺🇸 United States</option>
+                                    <option value="EU">🇪🇺 European Union</option>
+                                    <option value="UK">🇬🇧 United Kingdom</option>
+                                    <option value="CA">🇨🇦 Canada</option>
+                                    <option value="AU">🇦🇺 Australia</option>
+                                    <option value="JP">🇯🇵 Japan</option>
+                                    <option value="IN">🇮🇳 India</option>
+                                </select>
+                                <select id="metadataSource" class="filter-select">
+                                    <option value="">📡 All Sources</option>
+                                    <option value="YouTube">📺 YouTube</option>
+                                    <option value="Spotify">🎵 Spotify</option>
+                                    <option value="Apple Music">🎵 Apple Music</option>
+                                    <option value="Netflix">🎬 Netflix</option>
+                                    <option value="Wikipedia">📖 Wikipedia</option>
+                                    <option value="Open Library">📚 Open Library</option>
+                                    <option value="US Copyright Office">🏛️ US Copyright Office</option>
+                                    <option value="Indian Copyright Office">🏛️ Indian Copyright Office</option>
+                                    <option value="EU Intellectual Property Office">🏛️ EU IPO</option>
+                                    <option value="Publisher">📰 Publisher</option>
+                                    <option value="Official Registry">📋 Official Registry</option>
+                                    <option value="Other">🔹 Other</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="search-options">
-                            <select id="contentType" class="filter-select">
-                                <option value="">All Types</option>
-                                <optgroup label="📚 Creative Works">
-                                    <option value="book">📚 Books</option>
-                                    <option value="music">🎵 Music</option>
-                                    <option value="film">🎬 Films</option>
-                                    <option value="article">📄 Articles</option>
-                                    <option value="artwork">🎨 Artwork</option>
-                                </optgroup>
-                                <optgroup label="💻 Software & Code">
-                                    <option value="software">💻 Software</option>
-                                    <option value="code">📦 Code/Library</option>
-                                </optgroup>
-                                <optgroup label="🚀 Innovation & Projects">
-                                    <option value="project">🚀 Projects</option>
-                                    <option value="innovation">💡 Innovation</option>
-                                    <option value="drone">🤖 Drones/Robotics</option>
-                                    <option value="technology">🔬 Technology</option>
-                                    <option value="research_project">🔬 Research Projects</option>
-                                </optgroup>
-                                <optgroup label="🏢 Companies & Startups">
-                                    <option value="startup">🚀 Startups</option>
-                                    <option value="company">🏢 Companies</option>
-                                </optgroup>
-                                <optgroup label="⚖️ Intellectual Property">
-                                    <option value="patent">📜 Patents</option>
-                                    <option value="trademark">®️ Trademarks</option>
-                                </optgroup>
-                                <optgroup label="📑 Academic & Research">
-                                    <option value="academic_paper">📑 Academic Papers</option>
-                                </optgroup>
-                            </select>
-                            <select id="jurisdiction" class="filter-select">
-                                <option value="">🌍 All Countries</option>
-                                <option value="US">🇺🇸 United States</option>
-                                <option value="EU">🇪🇺 European Union</option>
-                                <option value="UK">🇬🇧 United Kingdom</option>
-                                <option value="CA">🇨🇦 Canada</option>
-                                <option value="AU">🇦🇺 Australia</option>
-                                <option value="JP">🇯🇵 Japan</option>
-                                <option value="IN">🇮🇳 India</option>
-                            </select>
-                            <select id="metadataSource" class="filter-select">
-                                <option value="">📡 All Sources</option>
-                                <option value="YouTube">📺 YouTube</option>
-                                <option value="Spotify">🎵 Spotify</option>
-                                <option value="Apple Music">🎵 Apple Music</option>
-                                <option value="Netflix">🎬 Netflix</option>
-                                <option value="Wikipedia">📖 Wikipedia</option>
-                                <option value="Open Library">📚 Open Library</option>
-                                <option value="US Copyright Office">🏛️ US Copyright Office</option>
-                                <option value="Indian Copyright Office">🏛️ Indian Copyright Office</option>
-                                <option value="EU Intellectual Property Office">🏛️ EU IPO</option>
-                                <option value="Publisher">📰 Publisher</option>
-                                <option value="Official Registry">📋 Official Registry</option>
-                                <option value="Other">🔹 Other</option>
-                            </select>
-                        </div>
+                        <p class="search-powered-text">Powered by live metadata sources and AI inference</p>
                     </div>
 
                     <!-- Spell Correction Notice -->
@@ -207,6 +210,63 @@
                 <div class="container">
                     <h3 class="section-heading">Copyright Status</h3>
                     <div id="smartTagContainer" class="smart-tag-container"></div>
+                </div>
+            </section>
+
+            <!-- Feature Highlights Section -->
+            <section class="feature-highlights-section">
+                <div class="container">
+                    <div class="feature-highlights-grid">
+                        <div class="feature-highlight-card">
+                            <div class="feature-highlight-icon">🎯</div>
+                            <h3 class="feature-highlight-title">Smart Title Matching</h3>
+                            <p class="feature-highlight-text">Understands incomplete or misspelled titles using AI semantic search and fuzzy matching algorithms.</p>
+                        </div>
+                        <div class="feature-highlight-card">
+                            <div class="feature-highlight-icon">✓</div>
+                            <h3 class="feature-highlight-title">Ownership Validation</h3>
+                            <p class="feature-highlight-text">Verifies creator and copyright ownership from trusted government registries and official sources.</p>
+                        </div>
+                        <div class="feature-highlight-card">
+                            <div class="feature-highlight-icon">⚖️</div>
+                            <h3 class="feature-highlight-title">Expiry & Legal Status</h3>
+                            <p class="feature-highlight-text">Calculates copyright protection duration and public domain status based on jurisdiction-specific rules.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Examples Section -->
+            <section class="status-examples-section">
+                <div class="container">
+                    <h2 class="status-examples-title">Understand Copyright Status at a Glance</h2>
+                    <div class="status-examples-grid">
+                        <div class="status-example-item">
+                            <div class="status-example-badge badge-protected">🔴 PROTECTED</div>
+                            <p class="status-example-desc">Work is under active copyright protection. Licensing required for commercial use.</p>
+                        </div>
+                        <div class="status-example-item">
+                            <div class="status-example-badge badge-public">🟢 PUBLIC DOMAIN</div>
+                            <p class="status-example-desc">Copyright has expired. Work is freely available for all uses without restrictions.</p>
+                        </div>
+                        <div class="status-example-item">
+                            <div class="status-example-badge badge-unknown">🟡 UNCERTAIN</div>
+                            <p class="status-example-desc">Insufficient data to determine status. Professional legal review recommended.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Call to Action Section -->
+            <section class="cta-section">
+                <div class="container">
+                    <div class="cta-content">
+                        <h2 class="cta-title">Start Verifying Copyright Status Today</h2>
+                        <p class="cta-subtitle">Access real-time copyright analysis powered by AI and authoritative metadata sources</p>
+                        <button class="cta-button" onclick="document.getElementById('searchInput').focus(); document.getElementById('search').scrollIntoView({behavior: 'smooth'});">
+                            Search Now →
+                        </button>
+                    </div>
                 </div>
             </section>
 
