@@ -32,6 +32,10 @@ const smartTagContainer = document.getElementById('smartTagContainer');
 let currentSearchId = null;
 let selectedWorkId = null;
 
+// Detect current page
+const isHomePage = window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
+const isSearchPage = window.location.pathname.endsWith('search.html');
+
 // Event Listeners
 searchBtn.addEventListener('click', performSearch);
 searchInput.addEventListener('keypress', (e) => {
@@ -49,6 +53,19 @@ async function performSearch() {
     const query = searchInput.value.trim();
     if (!query) return;
     
+    // If on home page, redirect to search page with query params
+    if (isHomePage) {
+        const params = new URLSearchParams({
+            query: query,
+            type: contentType.value || '',
+            country: jurisdiction.value || '',
+            source: metadataSource.value || ''
+        });
+        window.location.href = `search.html?${params.toString()}`;
+        return;
+    }
+    
+    // Execute search (for search page)
     showLoading();
     hideElements([searchResults, smartTagSection, suggestions]);
     
@@ -451,6 +468,28 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check API health
     checkApiHealth();
+    
+    // Auto-execute search on search page if query params exist
+    if (isSearchPage) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('query');
+        const type = urlParams.get('type');
+        const country = urlParams.get('country');
+        const source = urlParams.get('source');
+        
+        if (query) {
+            // Pre-fill search input and filters
+            searchInput.value = query;
+            if (type) contentType.value = type;
+            if (country) jurisdiction.value = country;
+            if (source) metadataSource.value = source;
+            
+            // Auto-execute search
+            setTimeout(() => {
+                performSearch();
+            }, 300);
+        }
+    }
 });
 
 async function checkApiHealth() {
@@ -475,9 +514,14 @@ const examples = [
     'The Great Gatsby'
 ];
 
-// Add example searches hint
-const searchHint = document.createElement('div');
-searchHint.className = 'search-hint';
-searchHint.style.cssText = 'font-size: 13px; color: var(--gray-500); margin-top: 8px;';
-searchHint.innerHTML = `Try: ${examples.map(e => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${e}';performSearch();return false;">${e}</a>`).join(' • ')}`;
-document.querySelector('.search-box').appendChild(searchHint);
+// Add example searches hint (only on search page, not home since home redirects)
+if (isSearchPage) {
+    const searchBox = document.querySelector('.search-box');
+    if (searchBox) {
+        const searchHint = document.createElement('div');
+        searchHint.className = 'search-hint';
+        searchHint.style.cssText = 'font-size: 13px; color: var(--gray-500); margin-top: 8px;';
+        searchHint.innerHTML = `Try: ${examples.map(e => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${e}';performSearch();return false;">${e}</a>`).join(' • ')}`;
+        searchBox.appendChild(searchHint);
+    }
+}
