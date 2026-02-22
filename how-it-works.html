@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How It Works - SCET</title>
+    <link rel="stylesheet" href="css/styles.css?v=4.0.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navbar -->
+        <header class="header">
+            <div class="header-container">
+                <div class="logo">
+                    <a href="index.html" class="logo-link">
+                        <span class="logo-text">SCET</span>
+                    </a>
+                </div>
+                <nav class="nav-links">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="search.html" class="nav-link">Search</a>
+                    <a href="how-it-works.html" class="nav-link active">How It Works</a>
+                    <a href="sources.html" class="nav-link">Sources</a>
+                    <a href="about.html" class="nav-link">About</a>
+                    <a href="disclaimer.html" class="nav-link">Disclaimer</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Page Header -->
+            <section class="page-header">
+                <div class="container">
+                    <h1 class="page-title">How SCET Works</h1>
+                    <p class="page-subtitle">Understanding the AI technology behind copyright analysis</p>
+                </div>
+            </section>
+
+            <!-- Content -->
+            <section class="about-section">
+                <div class="container">
+                    <div class="content-section">
+                        <h2 class="section-title">System Architecture</h2>
+                        <p class="content-text">
+                            SCET uses a multi-layered architecture that combines artificial intelligence, legal rule engines, 
+                            and real-time data collection to provide accurate copyright status predictions. Here's how each 
+                            component works together:
+                        </p>
+                    </div>
+
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">🔍</div>
+                            <h4 class="feature-title">1. AI Semantic Search</h4>
+                            <p class="feature-text">
+                                When you search for a work, SCET uses semantic search algorithms to understand your intent. 
+                                It doesn't just match keywords—it understands context, variations, and related works. The AI 
+                                calculates similarity scores using Jaccard algorithms to find the most relevant results.
+                            </p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">🌐</div>
+                            <h4 class="feature-title">2. Metadata Wrapper</h4>
+                            <p class="feature-text">
+                                SCET connects to multiple data sources simultaneously: Open Library (books), Wikipedia (general knowledge), 
+                                MusicBrainz (music), US Copyright Office, and more. The metadata wrapper normalizes data from different 
+                                formats into a unified structure for analysis.
+                            </p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">⚖️</div>
+                            <h4 class="feature-title">3. Legal Rule Engine</h4>
+                            <p class="feature-text">
+                                The rule engine applies copyright laws based on jurisdiction. It considers publication year, 
+                                creator death date (if available), work type, and jurisdiction-specific rules. For example, 
+                                in the US, works published before 1928 are generally in the public domain.
+                            </p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">🧠</div>
+                            <h4 class="feature-title">4. Machine Learning Model</h4>
+                            <p class="feature-text">
+                                The ML model learns from each search to improve accuracy. It identifies patterns in copyright 
+                                data, predicts missing information, and adjusts confidence scores based on data quality. 
+                                The more the system is used, the smarter it becomes.
+                            </p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">📊</div>
+                            <h4 class="feature-title">5. Confidence Scoring</h4>
+                            <p class="feature-text">
+                                Each result includes a confidence score (0-100%) based on data completeness, source reliability, 
+                                and legal certainty. High confidence (>80%) means strong evidence. Low confidence (<50%) means 
+                                professional legal review is recommended.
+                            </p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">🔄</div>
+                            <h4 class="feature-title">6. Dynamic Updates</h4>
+                            <p class="feature-text">
+                                Copyright status changes over time as works enter public domain. SCET's dynamic system 
+                                automatically updates status based on current dates, ensuring you always get the most 
+                                accurate information available.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h2 class="section-title">Search Process Flow</h2>
+                        <div class="novelty-card">
+                            <ol class="content-list" style="margin-left: 0; padding-left: var(--space-4);">
+                                <li><strong>Query Processing:</strong> Your search query is analyzed and normalized</li>
+                                <li><strong>Multi-Source Search:</strong> Simultaneous queries sent to all integrated data sources</li>
+                                <li><strong>Text Similarity Matching:</strong> Results filtered using 30% similarity threshold</li>
+                                <li><strong>Metadata Extraction:</strong> Title, creator, year, and type data extracted</li>
+                                <li><strong>Legal Analysis:</strong> Copyright rules applied based on jurisdiction</li>
+                                <li><strong>Confidence Calculation:</strong> Score computed based on data quality</li>
+                                <li><strong>Results Ranking:</strong> Results sorted by similarity and confidence</li>
+                                <li><strong>Display:</strong> Top 15 results presented with detailed metadata</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h2 class="section-title">Text Similarity Algorithm</h2>
+                        <p class="content-text">
+                            SCET uses the Jaccard similarity coefficient to compare your search query with titles in the database. 
+                            This algorithm measures the overlap between two sets of words:
+                        </p>
+                        <div class="novelty-card">
+                            <p class="novelty-text" style="font-style: normal;">
+                                <strong>Jaccard Similarity = (Common Words) / (Total Unique Words)</strong>
+                            </p>
+                            <p class="content-text">
+                                For example, searching "Harry Potter" against "Harry Potter and the Philosopher's Stone" 
+                                yields approximately 67% similarity. Only results with ≥30% similarity are shown to filter 
+                                out irrelevant matches.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h2 class="section-title">Copyright Status Logic</h2>
+                        <p class="content-text">
+                            The system determines copyright status using these rules:
+                        </p>
+                        <ul class="content-list">
+                            <li><strong>PUBLIC_DOMAIN:</strong> Published before jurisdiction-specific cutoff year (e.g., pre-1928 in US)</li>
+                            <li><strong>PROTECTED:</strong> Published after cutoff year and within copyright term (typically life + 70 years)</li>
+                            <li><strong>UNKNOWN:</strong> Insufficient data to make determination (requires manual verification)</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h2 class="section-title">Data Quality & Reliability</h2>
+                        <p class="content-text">
+                            SCET prioritizes data quality through:
+                        </p>
+                        <ul class="content-list">
+                            <li><strong>Multiple Source Verification:</strong> Cross-referencing data across sources</li>
+                            <li><strong>Source Authority Ranking:</strong> Official copyright offices ranked higher than crowd-sourced data</li>
+                            <li><strong>Transparent Confidence Scores:</strong> Users see how confident the system is in each prediction</li>
+                            <li><strong>Source Attribution:</strong> Every result shows exactly where the data came from</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-container">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <h4 class="footer-heading">SCET System</h4>
+                        <p class="footer-text">Research-grade AI system for copyright analysis</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4 class="footer-heading">Quick Links</h4>
+                        <p class="footer-text">
+                            <a href="search.html" style="color: var(--text-secondary); text-decoration: none;">Search</a> • 
+                            <a href="about.html" style="color: var(--text-secondary); text-decoration: none;">About</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2026 SCET - Copyright Status Tag System</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
