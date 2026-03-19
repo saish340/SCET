@@ -588,6 +588,18 @@ KNOWN_YOUTUBE_FRIENDLY_ARTISTS = {
         "recommendation": "Artist is commonly creator-friendly. Follow current attribution and usage policy.",
         "confidence": 0.82,
         "policy_note": "Known creator-friendly artist policy match"
+    },
+    'ikson': {
+        "copyright_status": "Licensed-Friendly 🟢",
+        "risk_level": "LOW",
+        "allowed_uses": [
+            "✔ Commercial use (with attribution)",
+            "✔ Monetized videos (with attribution)",
+            "✖ Re-uploading full song as standalone audio"
+        ],
+        "recommendation": "Artist is commonly creator-friendly. Follow current attribution and usage policy.",
+        "confidence": 0.82,
+        "policy_note": "Known creator-friendly artist policy match"
     }
 }
 
@@ -609,7 +621,17 @@ def check_known_youtube_policy(title, artist):
     if track_policy:
         return track_policy
 
-    return KNOWN_YOUTUBE_FRIENDLY_ARTISTS.get(norm_artist)
+    # Direct exact artist match
+    artist_policy = KNOWN_YOUTUBE_FRIENDLY_ARTISTS.get(norm_artist)
+    if artist_policy:
+        return artist_policy
+
+    # Fuzzy artist match (handles suffixes/prefixes/casing differences)
+    for known_artist, policy in KNOWN_YOUTUBE_FRIENDLY_ARTISTS.items():
+        if known_artist in norm_artist or norm_artist in known_artist:
+            return policy
+
+    return None
 
 
 def detect_creator_friendly_signals(title, artist, label):
@@ -642,8 +664,12 @@ def check_music_copyright(title, artist=''):
         creator_friendly=creator_friendly_signal
     )
 
-    # Policy override for known creator-friendly tracks.
-    policy_override = check_known_youtube_policy(resolved_title, resolved_artist)
+    # Policy override for known creator-friendly tracks/artists.
+    # Check both user-input and resolved metadata for robust matching.
+    policy_override = (
+        check_known_youtube_policy(title, artist)
+        or check_known_youtube_policy(resolved_title, resolved_artist)
+    )
     if policy_override:
         status = policy_override
 
