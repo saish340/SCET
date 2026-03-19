@@ -532,6 +532,32 @@ def determine_music_copyright_status(release_year):
     }
 
 
+KNOWN_YOUTUBE_FRIENDLY_TRACKS = {
+    ('grateful', 'neffex'): {
+        "copyright_status": "Licensed-Friendly 🟢",
+        "risk_level": "LOW",
+        "allowed_uses": [
+            "✔ Commercial use (with attribution)",
+            "✔ Monetized videos (with attribution)",
+            "✖ Re-uploading full song as standalone audio"
+        ],
+        "recommendation": "Track is commonly released for creator use. Follow current artist attribution terms.",
+        "confidence": 0.89,
+        "policy_note": "Known creator-friendly music policy match"
+    }
+}
+
+
+def normalize_for_policy(text):
+    return re.sub(r'[^a-z0-9]+', ' ', (text or '').lower()).strip()
+
+
+def check_known_youtube_policy(title, artist):
+    norm_title = normalize_for_policy(title)
+    norm_artist = normalize_for_policy(artist)
+    return KNOWN_YOUTUBE_FRIENDLY_TRACKS.get((norm_title, norm_artist))
+
+
 def check_music_copyright(title, artist=''):
     """Metadata-only YouTube music copyright risk check."""
     musicbrainz = fetch_musicbrainz_metadata(title, artist)
@@ -545,6 +571,12 @@ def check_music_copyright(title, artist=''):
     label = preferred.get('label') or musicbrainz.get('label')
 
     status = determine_music_copyright_status(release_year)
+
+    # Policy override for known creator-friendly tracks.
+    policy_override = check_known_youtube_policy(resolved_title, resolved_artist)
+    if policy_override:
+        status = policy_override
+
     confidence = max(status.get('confidence', 0.0), preferred.get('confidence', 0.0), musicbrainz.get('confidence', 0.0))
 
     sources = [
@@ -563,6 +595,12 @@ def check_music_copyright(title, artist=''):
             "url": None,
             "used": False,
             "note": "Optional source not configured in this deployment"
+        },
+        {
+            "name": "SCET Policy Rules",
+            "url": None,
+            "used": bool(policy_override),
+            "note": status.get("policy_note") if policy_override else "No policy override match"
         }
     ]
 
