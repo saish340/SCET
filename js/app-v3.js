@@ -31,6 +31,8 @@ const smartTagContainer = document.getElementById('smartTagContainer');
 // State
 let currentSearchId = null;
 let selectedWorkId = null;
+let selectedResultData = null;
+let latestDetailedTagData = null;
 
 // Detect current page
 const isHomePage = window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
@@ -166,6 +168,7 @@ function createResultElement(result) {
 // Select a Result and Generate Smart Tag
 async function selectResult(result) {
     selectedWorkId = result.id;
+    selectedResultData = result;
     
     showLoading();
     
@@ -186,6 +189,7 @@ async function selectResult(result) {
         }
         
         const detailedTag = await response.json();
+        latestDetailedTagData = detailedTag;
         displayDetailedSmartTag(detailedTag);
         
     } catch (error) {
@@ -367,6 +371,9 @@ function displaySmartTag(tag) {
 // Handle quick action button clicks
 function handleQuickAction(action, title) {
     switch(action) {
+        case 'verify':
+            verifySource(title);
+            break;
         case 'download':
             downloadTag(title);
             break;
@@ -384,8 +391,74 @@ function handleQuickAction(action, title) {
     }
 }
 
+function verifySource(title) {
+    const links = [];
+
+    if (selectedResultData && selectedResultData.source_url) {
+        links.push(selectedResultData.source_url);
+    }
+
+    // Always provide official verification links for manual confirmation.
+    links.push('https://www.copyright.gov/public-records/');
+    links.push(`https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(title)}`);
+
+    const uniqueLinks = [...new Set(links)];
+    uniqueLinks.forEach((url, idx) => {
+        setTimeout(() => window.open(url, '_blank', 'noopener'), idx * 120);
+    });
+}
+
 function downloadTag(title) {
-    alert(`Download tag for "${title}" - Feature coming soon!`);
+    const selected = selectedResultData || {};
+    const detail = latestDetailedTagData || {};
+    const tag = detail.tag || {};
+
+    const generatedAt = new Date().toISOString();
+    const fileSafeTitle = (title || 'copyright-report')
+        .replace(/[\\/:*?"<>|]+/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .slice(0, 80) || 'copyright-report';
+
+    const reportText = [
+        'SCET - Copyright Validation Report',
+        '=================================',
+        `Generated At: ${generatedAt}`,
+        '',
+        `Title: ${title || 'Unknown'}`,
+        `Creator: ${selected.creator || tag.creator || 'Unknown'}`,
+        `Source: ${selected.source || 'Unknown'}`,
+        `Source URL: ${selected.source_url || 'N/A'}`,
+        `Publication Year: ${selected.publication_year || tag.publication_year || 'Unknown'}`,
+        `Content Type: ${selected.content_type || 'Unknown'}`,
+        `Jurisdiction: ${tag.jurisdiction || jurisdiction.value || 'US'}`,
+        '',
+        'Status Summary',
+        '--------------',
+        `Copyright Status: ${tag.status_text || tag.copyright_status || selected.copyright_status || 'UNKNOWN'}`,
+        `Expiry Info: ${tag.expiry_info || tag.expiry_timeline || 'Not available'}`,
+        `Confidence: ${Math.round((tag.confidence_score || tag.confidence || 0) * 100)}%`,
+        '',
+        'AI Reasoning',
+        '-----------',
+        `${tag.ai_reasoning || 'No detailed reasoning available.'}`,
+        '',
+        'Disclaimer',
+        '----------',
+        `${tag.disclaimer || 'This report is for informational purposes only and does not constitute legal advice.'}`,
+        '',
+        `Generated from: ${window.location.href}`
+    ].join('\n');
+
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl;
+    anchor.download = `SCET_Report_${fileSafeTitle}.txt`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(downloadUrl);
 }
 
 function shareTag(title) {
