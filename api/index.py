@@ -8,6 +8,8 @@ import json
 import urllib.request
 import urllib.parse
 import re
+import os
+import base64
 from difflib import SequenceMatcher
 from datetime import datetime
 
@@ -335,6 +337,250 @@ def search_eu_trademark(query):
         print(f"EUIPO error: {e}")
     return results
 
+
+def safe_int_year(value):
+    if not value:
+        return None
+    match = re.search(r'\b(1[0-9]{3}|20[0-2][0-9])\b', str(value))
+    return int(match.group(1)) if match else None
+
+
+def fetch_musicbrainz_metadata(title, artist=''):
+    """Fetch metadata only from MusicBrainz. No media download/streaming."""
+    metadata = {
+        "title": title,
+        "artist": artist or None,
+        "release_year": None,
+        "label": None,
+        "source": "MusicBrainz",
+        "source_url": None,
+        "confidence": 0.0
+    }
+
+    try:
+        query_parts = [f'recording:"{title}"']
+        if artist:
+            query_parts.append(f'artist:"{artist}"')
+        mb_query = ' AND '.join(query_parts)
+        url = f"https://musicbrainz.org/ws/2/recording/?query={urllib.parse.quote(mb_query)}&fmt=json&limit=5"
+
+        with make_request(url) as resp:
+            data = json.loads(resp.read().decode())
+            recordings = data.get('recordings', [])
+            if not recordings:
+                return metadata
+
+            best = recordings[0]
+            mb_title = best.get('title', title)
+            artist_credit = best.get('artist-credit', [])
+            mb_artist = None
+            if artist_credit:
+                mb_artist = ''.join([a.get('name', '') for a in artist_credit if isinstance(a, dict)])
+
+            release_year = safe_int_year(best.get('first-release-date'))
+            releases = best.get('releases', [])
+            if not release_year and releases:
+                release_year = safe_int_year(releases[0].get('date'))
+
+            rel_id = best.get('id')
+            metadata.update({
+                "title": mb_title,
+                "artist": mb_artist or artist or None,
+                "release_year": release_year,
+                "source_url": f"https://musicbrainz.org/recording/{rel_id}" if rel_id else None,
+                "confidence": 0.82
+            })
+    except Exception as e:
+        print(f"MusicBrainz error: {e}")
+
+    return metadata
+
+
+def fetch_spotify_metadata(title, artist=''):
+    """Fetch metadata only from Spotify API using optional client credentials."""
+    metadata = {
+        "title": None,
+        "artist": None,
+        "release_year": None,
+        "label": None,
+        "source": "Spotify",
+        "source_url": None,
+        "confidence": 0.0,
+        "available": False
+    }
+
+    client_id = os.environ.get('SPOTIFY_CLIENT_ID', '').strip()
+    client_secret = os.environ.get('SPOTIFY_CLIENT_SECRET', '').strip()
+    if not client_id or not client_secret:
+        return metadata
+
+    try:
+        auth_raw = f"{client_id}:{client_secret}".encode('utf-8')
+        auth_b64 = base64.b64encode(auth_raw).decode('ascii')
+        token_req = urllib.request.Request(
+            'https://accounts.spotify.com/api/token',
+            data=urllib.parse.urlencode({'grant_type': 'client_credentials'}).encode('utf-8'),
+            headers={
+                'Authorization': f'Basic {auth_b64}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        )
+
+        with urllib.request.urlopen(token_req, timeout=10) as token_resp:
+            token_data = json.loads(token_resp.read().decode())
+            access_token = token_data.get('access_token')
+            if not access_token:
+                return metadata
+
+        q = f"track:{title}"
+        if artist:
+            q += f" artist:{artist}"
+        search_url = f"https://api.spotify.com/v1/search?type=track&limit=1&q={urllib.parse.quote(q)}"
+        search_req = urllib.request.Request(search_url, headers={'Authorization': f'Bearer {access_token}'})
+
+        with urllib.request.urlopen(search_req, timeout=10) as search_resp:
+            search_data = json.loads(search_resp.read().decode())
+            items = search_data.get('tracks', {}).get('items', [])
+            if not items:
+                return metadata
+
+            track = items[0]
+            album = track.get('album', {})
+            release_year = safe_int_year(album.get('release_date'))
+            artists = track.get('artists', [])
+            artist_name = ', '.join([a.get('name', '') for a in artists if a.get('name')])
+            title_name = track.get('name')
+            spotify_url = track.get('external_urls', {}).get('spotify')
+
+            label = None
+            album_id = album.get('id')
+            if album_id:
+                album_url = f"https://api.spotify.com/v1/albums/{album_id}"
+                album_req = urllib.request.Request(album_url, headers={'Authorization': f'Bearer {access_token}'})
+                with urllib.request.urlopen(album_req, timeout=10) as album_resp:
+                    album_data = json.loads(album_resp.read().decode())
+                    label = album_data.get('label')
+
+            metadata.update({
+                "title": title_name,
+                "artist": artist_name or artist or None,
+                "release_year": release_year,
+                "label": label,
+                "source_url": spotify_url,
+                "confidence": 0.9,
+                "available": True
+            })
+    except Exception as e:
+        print(f"Spotify metadata error: {e}")
+
+    return metadata
+
+
+def determine_music_copyright_status(release_year):
+    """Simple rule-based status: modern tracks protected, very old possibly public domain."""
+    if not release_year:
+        return {
+            "copyright_status": "UNCLEAR",
+            "risk_level": "MEDIUM",
+            "allowed_uses": [
+                "✖ Commercial use",
+                "✖ Monetized videos",
+                "✔ Possible fair use (limited)"
+            ],
+            "recommendation": "Ownership data is incomplete. Verify rights and licensing before upload.",
+            "confidence": 0.55
+        }
+
+    current_year = datetime.now().year
+    if release_year < 1929:
+        return {
+            "copyright_status": "Possibly Public Domain 🟢",
+            "risk_level": "LOW",
+            "allowed_uses": [
+                "✔ Commercial use (verify jurisdiction)",
+                "✔ Monetized videos (verify recording rights)",
+                "✔ Adaptation/remix (verify derivative rights)"
+            ],
+            "recommendation": "Likely public domain due to age. Still verify territory-specific rules.",
+            "confidence": 0.78
+        }
+
+    # Modern songs are treated as protected by default.
+    if current_year - release_year <= 95:
+        return {
+            "copyright_status": "Protected 🔴",
+            "risk_level": "HIGH",
+            "allowed_uses": [
+                "✖ Commercial use",
+                "✖ Monetized videos",
+                "✔ Possible fair use (limited)"
+            ],
+            "recommendation": "Use licensed or royalty-free music.",
+            "confidence": 0.91
+        }
+
+    return {
+        "copyright_status": "Protected 🔴",
+        "risk_level": "HIGH",
+        "allowed_uses": [
+            "✖ Commercial use",
+            "✖ Monetized videos",
+            "✔ Possible fair use (limited)"
+        ],
+        "recommendation": "Assume protection unless official records confirm public domain.",
+        "confidence": 0.82
+    }
+
+
+def check_music_copyright(title, artist=''):
+    """Metadata-only YouTube music copyright risk check."""
+    musicbrainz = fetch_musicbrainz_metadata(title, artist)
+    spotify = fetch_spotify_metadata(title, artist)
+
+    # Prefer Spotify metadata when available, otherwise fallback to MusicBrainz.
+    preferred = spotify if spotify.get('available') else musicbrainz
+    release_year = preferred.get('release_year') or musicbrainz.get('release_year')
+    resolved_artist = preferred.get('artist') or musicbrainz.get('artist') or artist or 'Unknown'
+    resolved_title = preferred.get('title') or musicbrainz.get('title') or title
+    label = preferred.get('label') or musicbrainz.get('label')
+
+    status = determine_music_copyright_status(release_year)
+    confidence = max(status.get('confidence', 0.0), preferred.get('confidence', 0.0), musicbrainz.get('confidence', 0.0))
+
+    sources = [
+        {
+            "name": "MusicBrainz API",
+            "url": musicbrainz.get('source_url'),
+            "used": bool(musicbrainz.get('source_url') or musicbrainz.get('release_year'))
+        },
+        {
+            "name": "Spotify API (metadata only)",
+            "url": spotify.get('source_url'),
+            "used": bool(spotify.get('available'))
+        },
+        {
+            "name": "YouTube metadata",
+            "url": None,
+            "used": False,
+            "note": "Optional source not configured in this deployment"
+        }
+    ]
+
+    return {
+        "song": resolved_title,
+        "artist": resolved_artist,
+        "release_year": release_year,
+        "publisher_label": label,
+        "copyright_status": status["copyright_status"],
+        "youtube_usage_risk": status["risk_level"],
+        "allowed_uses": status["allowed_uses"],
+        "recommendation": status["recommendation"],
+        "confidence_score": round(min(1.0, confidence), 2),
+        "sources": sources,
+        "legal_notice": "Metadata-only analysis. No music downloading, streaming, or storage is performed.",
+        "analyzed_at": datetime.now().isoformat()
+    }
+
 def generate_smart_tag(title, year, jurisdiction="US", creator=""):
     current_year = datetime.now().year
     pub_year = year or current_year
@@ -558,12 +804,24 @@ class handler(BaseHTTPRequestHandler):
                     {"item": "Review allowed uses", "checked": True, "required": False, "status": "done"}
                 ]
             }
+
+        elif path == '/api/youtube-check':
+            title = params.get('title', '').strip()
+            artist = params.get('artist', '').strip()
+
+            if not title:
+                response = {
+                    "error": "Song title is required",
+                    "example": "/api/youtube-check?title=Shape%20of%20You&artist=Ed%20Sheeran"
+                }
+            else:
+                response = check_music_copyright(title, artist)
         
         else:
             response = {
                 "name": "SCET - Copyright Status Tag",
                 "version": "1.0.0",
-                "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/tag/detailed", "/api/v1/health"]
+                "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/tag/detailed", "/api/v1/health", "/api/youtube-check"]
             }
         
         self.wfile.write(json.dumps(response).encode())

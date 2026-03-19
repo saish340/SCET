@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Music Copyright Checker - SCET</title>
+    <link rel="stylesheet" href="css/styles.css?v=4.0.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container youtube-check-page">
+        <header class="header">
+            <div class="header-container">
+                <div class="logo">
+                    <a href="index.html" class="logo-link">
+                        <span class="logo-text">SCET</span>
+                    </a>
+                </div>
+                <nav class="nav-links">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="search.html" class="nav-link">Search</a>
+                    <a href="/youtube-check" class="nav-link active">YouTube Check</a>
+                    <a href="how-it-works.html" class="nav-link">How It Works</a>
+                    <a href="sources.html" class="nav-link">Sources</a>
+                    <a href="about.html" class="nav-link">About</a>
+                    <a href="disclaimer.html" class="nav-link">Disclaimer</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="page-header">
+                <div class="container">
+                    <h1 class="page-title">YouTube Music Copyright Checker</h1>
+                    <p class="page-subtitle">Check copyright risk before using music in your videos</p>
+                </div>
+            </section>
+
+            <section class="search-section">
+                <div class="search-container">
+                    <div class="search-box youtube-check-box">
+                        <div class="youtube-form-grid">
+                            <div class="input-group">
+                                <label for="ytSongTitle" class="input-label">Song Title</label>
+                                <input
+                                    type="text"
+                                    id="ytSongTitle"
+                                    class="search-input"
+                                    placeholder="e.g., Shape of You"
+                                    autocomplete="off"
+                                    required
+                                >
+                            </div>
+                            <div class="input-group">
+                                <label for="ytArtistName" class="input-label">Artist Name (optional)</label>
+                                <input
+                                    type="text"
+                                    id="ytArtistName"
+                                    class="search-input"
+                                    placeholder="e.g., Ed Sheeran"
+                                    autocomplete="off"
+                                >
+                            </div>
+                        </div>
+                        <div class="youtube-check-actions">
+                            <button id="ytCheckBtn" class="search-btn youtube-check-btn">
+                                <span class="btn-icon">🎵</span>
+                                <span class="btn-text">Check Copyright</span>
+                            </button>
+                        </div>
+                        <p class="youtube-legal-note">
+                            Metadata-only analysis. No music is downloaded, streamed, or stored.
+                        </p>
+                    </div>
+
+                    <div id="ytLoading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <span>Analyzing metadata...</span>
+                    </div>
+
+                    <div id="ytError" class="correction-notice hidden"></div>
+                </div>
+            </section>
+
+            <section id="ytResultSection" class="smart-tag-section hidden">
+                <div class="container">
+                    <h3 class="section-heading">Music Risk Assessment</h3>
+                    <div id="ytResultCard" class="music-result-card"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-container">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <h4 class="footer-heading">SCET System</h4>
+                        <p class="footer-text">Research-grade AI system for copyright analysis</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4 class="footer-heading">Quick Links</h4>
+                        <p class="footer-text">
+                            <a href="search.html" style="color: var(--text-secondary); text-decoration: none;">Search</a> •
+                            <a href="disclaimer.html" style="color: var(--text-secondary); text-decoration: none;">Disclaimer</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2026 SCET - Copyright Status Tag System</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/youtube-check.js"></script>
+</body>
+</html>

@@ -1505,3 +1505,74 @@ body {
         font-size: 28px;
     }
 }
+
+/* YouTube Music Copyright Checker */
+.youtube-check-box {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.youtube-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.input-group {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.input-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.youtube-check-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.youtube-check-btn {
+    min-width: 220px;
+}
+
+.youtube-legal-note {
+    margin: 0;
+    color: var(--gray-500);
+    font-size: 13px;
+}
+
+.music-result-card .smart-tag {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.music-card-grid {
+    display: grid;
+    gap: 10px;
+    margin-bottom: var(--space-4);
+}
+
+.music-row {
+    color: var(--text-primary);
+}
+
+.music-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+}
+
+@media (max-width: 768px) {
+    .youtube-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .youtube-check-btn {
+        width: 100%;
+        min-width: 0;
+    }
+}
