@@ -40,159 +40,184 @@
             </section>
 
             <!-- Search Section -->
-            <section class="search-section">
-                <div class="search-container">
-                    <div class="search-box">
-                        <div class="search-input-wrapper">
-                            <input 
-                                type="text" 
-                                id="searchInput" 
-                                class="search-input"
-                                placeholder="Search copyright status by title (e.g., 'Harry Potter', 'Romeo and Juliet')"
-                                autocomplete="off"
-                            >
-                            <button id="searchBtn" class="search-btn">
-                                <span class="btn-icon">🔍</span>
-                                <span class="btn-text">Search</span>
-                            </button>
+            <section class="search-section premium-search-section">
+                <div class="search-container premium-dashboard-grid">
+                    <article class="premium-card premium-search-card">
+                        <div class="premium-card-head">
+                            <h3 class="premium-card-title">Search Copyright Metadata</h3>
+                            <p class="premium-card-subtitle">AI-assisted metadata matching with legal risk indicators</p>
                         </div>
-                        <div class="search-options">
-                            <select id="contentType" class="filter-select">
-                                <option value="">All Types</option>
-                                <optgroup label="📚 Creative Works">
-                                    <option value="book">📚 Books</option>
-                                    <option value="music">🎵 Music</option>
-                                    <option value="film">🎬 Films</option>
-                                    <option value="article">📄 Articles</option>
-                                    <option value="artwork">🎨 Artwork</option>
-                                </optgroup>
-                                <optgroup label="💻 Software & Code">
-                                    <option value="software">💻 Software</option>
-                                    <option value="code">📦 Code/Library</option>
-                                </optgroup>
-                                <optgroup label="🚀 Innovation & Projects">
-                                    <option value="project">🚀 Projects</option>
-                                    <option value="innovation">💡 Innovation</option>
-                                    <option value="drone">🤖 Drones/Robotics</option>
-                                    <option value="technology">🔬 Technology</option>
-                                    <option value="research_project">🔬 Research Projects</option>
-                                </optgroup>
-                                <optgroup label="🏢 Companies & Startups">
-                                    <option value="startup">🚀 Startups</option>
-                                    <option value="company">🏢 Companies</option>
-                                </optgroup>
-                                <optgroup label="⚖️ Intellectual Property">
-                                    <option value="patent">📜 Patents</option>
-                                    <option value="trademark">®️ Trademarks</option>
-                                </optgroup>
-                                <optgroup label="📑 Academic & Research">
-                                    <option value="academic_paper">📑 Academic Papers</option>
-                                </optgroup>
-                            </select>
-                            <select id="jurisdiction" class="filter-select">
-                                <option value="">🌍 All Countries</option>
-                                <option value="US">🇺🇸 United States</option>
-                                <option value="EU">🇪🇺 European Union</option>
-                                <option value="UK">🇬🇧 United Kingdom</option>
-                                <option value="CA">🇨🇦 Canada</option>
-                                <option value="AU">🇦🇺 Australia</option>
-                                <option value="JP">🇯🇵 Japan</option>
-                                <option value="IN">🇮🇳 India</option>
-                            </select>
-                            <select id="metadataSource" class="filter-select">
-                                <option value="">📡 All Sources</option>
-                                <option value="YouTube">📺 YouTube</option>
-                                <option value="Spotify">🎵 Spotify</option>
-                                <option value="Apple Music">🎵 Apple Music</option>
-                                <option value="Netflix">🎬 Netflix</option>
-                                <option value="Wikipedia">📖 Wikipedia</option>
-                                <option value="Open Library">📚 Open Library</option>
-                                <option value="US Copyright Office">🏛️ US Copyright Office</option>
-                                <option value="Indian Copyright Office">🏛️ Indian Copyright Office</option>
-                                <option value="EU Intellectual Property Office">🏛️ EU IPO</option>
-                                <option value="Publisher">📰 Publisher</option>
-                                <option value="Official Registry">📋 Official Registry</option>
-                                <option value="Other">🔹 Other</option>
-                            </select>
+                        <div class="search-box">
+                            <div class="search-input-wrapper">
+                                <input 
+                                    type="text" 
+                                    id="searchInput" 
+                                    class="search-input"
+                                    placeholder="Search copyright status by title (e.g., 'Harry Potter', 'Romeo and Juliet')"
+                                    autocomplete="off"
+                                >
+                                <button id="searchBtn" class="search-btn">
+                                    <span class="btn-icon">🔍</span>
+                                    <span class="btn-text">Search</span>
+                                </button>
+                            </div>
+                            <div class="search-options">
+                                <select id="contentType" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <optgroup label="📚 Creative Works">
+                                        <option value="book">📚 Books</option>
+                                        <option value="music">🎵 Music</option>
+                                        <option value="film">🎬 Films</option>
+                                        <option value="article">📄 Articles</option>
+                                        <option value="artwork">🎨 Artwork</option>
+                                    </optgroup>
+                                    <optgroup label="💻 Software & Code">
+                                        <option value="software">💻 Software</option>
+                                        <option value="code">📦 Code/Library</option>
+                                    </optgroup>
+                                    <optgroup label="🚀 Innovation & Projects">
+                                        <option value="project">🚀 Projects</option>
+                                        <option value="innovation">💡 Innovation</option>
+                                        <option value="drone">🤖 Drones/Robotics</option>
+                                        <option value="technology">🔬 Technology</option>
+                                        <option value="research_project">🔬 Research Projects</option>
+                                    </optgroup>
+                                    <optgroup label="🏢 Companies & Startups">
+                                        <option value="startup">🚀 Startups</option>
+                                        <option value="company">🏢 Companies</option>
+                                    </optgroup>
+                                    <optgroup label="⚖️ Intellectual Property">
+                                        <option value="patent">📜 Patents</option>
+                                        <option value="trademark">®️ Trademarks</option>
+                                    </optgroup>
+                                    <optgroup label="📑 Academic & Research">
+                                        <option value="academic_paper">📑 Academic Papers</option>
+                                    </optgroup>
+                                </select>
+                                <select id="jurisdiction" class="filter-select">
+                                    <option value="">🌍 All Countries</option>
+                                    <option value="US">🇺🇸 United States</option>
+                                    <option value="EU">🇪🇺 European Union</option>
+                                    <option value="UK">🇬🇧 United Kingdom</option>
+                                    <option value="CA">🇨🇦 Canada</option>
+                                    <option value="AU">🇦🇺 Australia</option>
+                                    <option value="JP">🇯🇵 Japan</option>
+                                    <option value="IN">🇮🇳 India</option>
+                                </select>
+                                <select id="metadataSource" class="filter-select">
+                                    <option value="">📡 All Sources</option>
+                                    <option value="YouTube">📺 YouTube</option>
+                                    <option value="Spotify">🎵 Spotify</option>
+                                    <option value="Apple Music">🎵 Apple Music</option>
+                                    <option value="Netflix">🎬 Netflix</option>
+                                    <option value="Wikipedia">📖 Wikipedia</option>
+                                    <option value="Open Library">📚 Open Library</option>
+                                    <option value="US Copyright Office">🏛️ US Copyright Office</option>
+                                    <option value="Indian Copyright Office">🏛️ Indian Copyright Office</option>
+                                    <option value="EU Intellectual Property Office">🏛️ EU IPO</option>
+                                    <option value="Publisher">📰 Publisher</option>
+                                    <option value="Official Registry">📋 Official Registry</option>
+                                    <option value="Other">🔹 Other</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Spell Correction Notice -->
-                    <div id="correctionNotice" class="correction-notice hidden">
-                        <span>Did you mean: </span>
-                        <a href="#" id="correctedQuery"></a>
-                    </div>
+                        <!-- Spell Correction Notice -->
+                        <div id="correctionNotice" class="correction-notice hidden">
+                            <span>Did you mean: </span>
+                            <a href="#" id="correctedQuery"></a>
+                        </div>
 
-                    <!-- Loading Indicator -->
-                    <div id="loadingIndicator" class="loading hidden">
-                        <div class="spinner"></div>
-                        <span>Searching with AI...</span>
-                    </div>
+                        <!-- Loading Indicator -->
+                        <div id="loadingIndicator" class="loading hidden">
+                            <div class="spinner"></div>
+                            <span>Searching with AI...</span>
+                        </div>
 
-                    <!-- AI Explanation -->
-                    <div id="aiExplanation" class="ai-explanation hidden">
-                        <span class="ai-icon">🤖</span>
-                        <p id="aiExplanationText"></p>
-                    </div>
+                        <!-- AI Explanation -->
+                        <div id="aiExplanation" class="ai-explanation hidden">
+                            <span class="ai-icon">🤖</span>
+                            <p id="aiExplanationText"></p>
+                        </div>
+                    </article>
 
-                    <!-- Search Results -->
-                    <div id="searchResults" class="search-results hidden">
-                        <div class="results-container">
+                    <article class="premium-card premium-result-panel">
+                        <div class="premium-card-head">
+                            <h3 class="premium-card-title">Result Snapshot</h3>
+                            <p class="premium-card-subtitle">Title, creator, status, expiry and confidence</p>
+                        </div>
+
+                        <!-- Search Results -->
+                        <div id="searchResults" class="search-results hidden">
                             <div class="results-main">
                                 <h3 class="results-heading">Search Results</h3>
                                 <div id="resultsList" class="results-list"></div>
                             </div>
-                            
-                            <!-- Quick Searches Sidebar -->
-                            <div class="quick-searches-box">
-                                <h4 class="quick-searches-title">🔍 Quick Searches</h4>
-                                <div class="quick-searches-grid">
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Harry Potter';performSearch();">
-                                        📚 Harry Potter
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Star Wars';performSearch();">
-                                        🎬 Star Wars
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Beatles';performSearch();">
-                                        🎵 The Beatles
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Romeo and Juliet';performSearch();">
-                                        📖 Romeo & Juliet
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Mona Lisa';performSearch();">
-                                        🎨 Mona Lisa
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Alice in Wonderland';performSearch();">
-                                        📕 Alice in Wonderland
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Titanic movie';performSearch();">
-                                        🎥 Titanic
-                                    </button>
-                                    <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Pride and Prejudice';performSearch();">
-                                        📗 Pride & Prejudice
-                                    </button>
-                                </div>
-                                
-                                <div class="quick-searches-divider"></div>
-                                
-                                <h4 class="quick-searches-subtitle">By Category</h4>
-                                <div class="category-buttons">
-                                    <button class="category-btn" onclick="document.getElementById('contentType').value='book';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for books...';">
-                                        📚 Books
-                                    </button>
-                                    <button class="category-btn" onclick="document.getElementById('contentType').value='film';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for films...';">
-                                        🎬 Films
-                                    </button>
-                                    <button class="category-btn" onclick="document.getElementById('contentType').value='music';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for music...';">
-                                        🎵 Music
-                                    </button>
-                                    <button class="category-btn" onclick="document.getElementById('contentType').value='artwork';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for artwork...';">
-                                        🎨 Art
-                                    </button>
-                                </div>
+                        </div>
+
+                        <div class="premium-empty-result-state">
+                            <div class="premium-placeholder-title">No results yet</div>
+                            <p class="premium-placeholder-text">Run a search to view copyright status cards with badges and confidence.</p>
+                            <div class="premium-status-row">
+                                <span class="result-badge badge-protected">Protected</span>
+                                <span class="result-badge badge-public">Public Domain</span>
+                                <span class="result-badge badge-unknown">Uncertain</span>
                             </div>
                         </div>
-                    </div>
+                    </article>
+
+                    <article class="premium-card premium-feature-panel">
+                        <div class="premium-card-head">
+                            <h3 class="premium-card-title">Feature Stack</h3>
+                            <p class="premium-card-subtitle">Core intelligence layers</p>
+                        </div>
+                        <div class="premium-mini-grid">
+                            <div class="premium-mini-card">
+                                <span class="mini-icon">🎯</span>
+                                <h4>AI Matching</h4>
+                                <p>Context-aware title similarity and ranking.</p>
+                            </div>
+                            <div class="premium-mini-card">
+                                <span class="mini-icon">📚</span>
+                                <h4>Metadata Sources</h4>
+                                <p>Cross-source lookup for ownership evidence.</p>
+                            </div>
+                            <div class="premium-mini-card">
+                                <span class="mini-icon">⚖️</span>
+                                <h4>Legal Engine</h4>
+                                <p>Jurisdiction-aware copyright duration rules.</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="premium-card premium-example-panel">
+                        <div class="premium-card-head">
+                            <h3 class="premium-card-title">Quick Examples</h3>
+                            <p class="premium-card-subtitle">Start with known works</p>
+                        </div>
+                        <div class="quick-searches-grid premium-quick-grid">
+                            <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Harry Potter';performSearch();">📚 Harry Potter</button>
+                            <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Avatar';performSearch();">🎬 Avatar</button>
+                            <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Shape of You';performSearch();">🎵 Shape of You</button>
+                            <button class="quick-search-btn" onclick="document.getElementById('searchInput').value='Sherlock Holmes';performSearch();">📖 Sherlock Holmes</button>
+                        </div>
+                        <div class="premium-example-list">
+                            <div class="premium-example-item">
+                                <div>Harry Potter</div>
+                                <span class="result-badge badge-protected">Protected</span>
+                            </div>
+                            <div class="premium-example-item">
+                                <div>Romeo and Juliet</div>
+                                <span class="result-badge badge-public">Public Domain</span>
+                            </div>
+                        </div>
+                        <div class="category-buttons">
+                            <button class="category-btn" onclick="document.getElementById('contentType').value='book';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for books...';">📚 Books</button>
+                            <button class="category-btn" onclick="document.getElementById('contentType').value='film';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for films...';">🎬 Films</button>
+                            <button class="category-btn" onclick="document.getElementById('contentType').value='music';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for music...';">🎵 Music</button>
+                            <button class="category-btn" onclick="document.getElementById('contentType').value='artwork';document.getElementById('searchInput').value='';document.getElementById('searchInput').placeholder='Search for artwork...';">🎨 Art</button>
+                        </div>
+                    </article>
 
                     <!-- Suggestions -->
                     <div id="suggestions" class="suggestions hidden">
