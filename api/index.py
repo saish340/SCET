@@ -8,7 +8,24 @@ import json
 import urllib.request
 import urllib.parse
 import re
+from difflib import SequenceMatcher
 from datetime import datetime
+
+
+QUERY_NOISE_WORDS = {
+    'song', 'songs', 'music', 'track', 'audio', 'video', 'lyrics',
+    'official', 'full', 'new', 'old', 'hindi', 'marathi', 'tamil',
+    'telugu', 'movie', 'film'
+}
+
+
+def simplify_query(raw_query):
+    """Remove generic media words so title matching stays effective."""
+    if not raw_query:
+        return ""
+    normalized = re.sub(r'[^\w\s]', ' ', raw_query.lower())
+    words = [w for w in normalized.split() if len(w) > 1 and w not in QUERY_NOISE_WORDS]
+    return ' '.join(words).strip()
 
 def extract_year(text):
     if not text:
@@ -28,9 +45,13 @@ def calculate_text_similarity(query, text):
     """
     if not query or not text:
         return 0.0
-    
+
+    # Use simplified query for matching while keeping original as fallback
+    simplified_query = simplify_query(query)
+    query_for_match = simplified_query if simplified_query else query
+
     # Normalize to lowercase and remove special chars
-    query = re.sub(r'[^\w\s]', ' ', query.lower())
+    query = re.sub(r'[^\w\s]', ' ', query_for_match.lower())
     text = re.sub(r'[^\w\s]', ' ', text.lower())
     
     # Split into words and remove common stop words
@@ -49,16 +70,29 @@ def calculate_text_similarity(query, text):
         return 0.0
     
     jaccard = intersection / union
+
+    # Fuzzy token overlap helps near-spellings like "chamak" vs "chammak"
+    fuzzy_hits = 0
+    for q_word in query_words:
+        best_ratio = max((SequenceMatcher(None, q_word, t_word).ratio() for t_word in text_words), default=0)
+        if best_ratio >= 0.84:
+            fuzzy_hits += 1
+    fuzzy_overlap = fuzzy_hits / len(query_words) if query_words else 0.0
+
+    # Character-level ratio for short title variations
+    phrase_ratio = SequenceMatcher(None, query.strip(), text.strip()).ratio()
+
+    similarity = max(jaccard, fuzzy_overlap * 0.9, phrase_ratio * 0.6)
     
     # Bonus for exact phrase matches
     if query.lower() in text.lower():
-        jaccard = min(1.0, jaccard + 0.3)
+        similarity = min(1.0, similarity + 0.3)
     
     # Bonus for all query words present
     if query_words.issubset(text_words):
-        jaccard = min(1.0, jaccard + 0.2)
-    
-    return round(jaccard, 2)
+        similarity = min(1.0, similarity + 0.2)
+
+    return round(similarity, 2)
 
 def make_request(url):
     """Make HTTP request with proper headers"""
@@ -82,7 +116,8 @@ def get_copyright_status(year):
 def search_openlibrary(query):
     results = []
     try:
-        url = f"https://openlibrary.org/search.json?q={urllib.parse.quote(query)}&limit=5"
+        search_query = simplify_query(query) or query
+        url = f"https://openlibrary.org/search.json?q={urllib.parse.quote(search_query)}&limit=5"
         with make_request(url) as resp:
             data = json.loads(resp.read().decode())
             for i, doc in enumerate(data.get('docs', [])[:5]):
@@ -94,8 +129,8 @@ def search_openlibrary(query):
                 text_to_match = f"{title} {author}"
                 similarity = calculate_text_similarity(query, text_to_match)
                 
-                # Only include if similarity is above threshold (30%)
-                if similarity >= 0.3:
+                # Lower threshold allows useful partial/fuzzy title matches
+                if similarity >= 0.2:
                     results.append({
                         "id": f"ol_{i}",
                         "title": title,
@@ -114,7 +149,8 @@ def search_openlibrary(query):
 def search_wikipedia(query):
     results = []
     try:
-        url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&format=json&srlimit=5"
+        search_query = simplify_query(query) or query
+        url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(search_query)}&format=json&srlimit=5"
         with make_request(url) as resp:
             data = json.loads(resp.read().decode())
             for i, item in enumerate(data.get('query', {}).get('search', [])[:5]):
@@ -126,8 +162,8 @@ def search_wikipedia(query):
                 text_to_match = f"{title} {snippet}"
                 similarity = calculate_text_similarity(query, text_to_match)
                 
-                # Only include if similarity is above threshold (30%)
-                if similarity >= 0.3:
+                # Lower threshold allows useful partial/fuzzy title matches
+                if similarity >= 0.2:
                     results.append({
                         "id": f"wiki_{i}",
                         "title": title,
@@ -389,7 +425,8 @@ class handler(BaseHTTPRequestHandler):
                     results.extend(search_eu_trademark(q))
                 else:
                     # For YouTube, Spotify, Netflix, Apple Music, etc.
-                    # Search all sources but filter by the source field in results
+                    # Search all available sources and do not hard-filter by an
+                    # unsupported source label, otherwise results become empty.
                     results.extend(search_openlibrary(q))
                     results.extend(search_wikipedia(q))
                     
@@ -399,9 +436,6 @@ class handler(BaseHTTPRequestHandler):
                         results.extend(search_indian_copyright(q))
                     if jurisdiction == 'EU':
                         results.extend(search_eu_trademark(q))
-                    
-                    # Filter results by source field
-                    results = [r for r in results if source.lower() in r.get('source', '').lower()]
             
             results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
             response = {
