@@ -476,8 +476,22 @@ def fetch_spotify_metadata(title, artist=''):
     return metadata
 
 
-def determine_music_copyright_status(release_year):
-    """Simple rule-based status: modern tracks protected, very old possibly public domain."""
+def determine_music_copyright_status(release_year, metadata_quality=0.0, creator_friendly=False):
+    """Rule-based status with quality/friendly-signal awareness."""
+    if creator_friendly:
+        return {
+            "copyright_status": "Licensed-Friendly 🟢",
+            "risk_level": "LOW",
+            "allowed_uses": [
+                "✔ Commercial use (follow policy)",
+                "✔ Monetized videos (follow policy)",
+                "✖ Re-uploading as standalone audio"
+            ],
+            "recommendation": "Appears creator-friendly. Verify latest attribution/licensing policy before upload.",
+            "confidence": 0.83,
+            "policy_note": "Creator-friendly signals detected"
+        }
+
     if not release_year:
         return {
             "copyright_status": "UNCLEAR",
@@ -505,8 +519,22 @@ def determine_music_copyright_status(release_year):
             "confidence": 0.78
         }
 
-    # Modern songs are treated as protected by default.
+    # Modern songs are usually protected. If metadata quality is weak,
+    # reduce to medium risk instead of overconfident high-risk labeling.
     if current_year - release_year <= 95:
+        if metadata_quality < 0.6:
+            return {
+                "copyright_status": "Likely Protected 🟡",
+                "risk_level": "MEDIUM",
+                "allowed_uses": [
+                    "✖ Commercial use (unless licensed)",
+                    "✖ Monetized videos (unless licensed)",
+                    "✔ Possible fair use (limited)"
+                ],
+                "recommendation": "Likely protected, but metadata is incomplete. Confirm license terms before use.",
+                "confidence": 0.68
+            }
+
         return {
             "copyright_status": "Protected 🔴",
             "risk_level": "HIGH",
@@ -548,6 +576,28 @@ KNOWN_YOUTUBE_FRIENDLY_TRACKS = {
 }
 
 
+KNOWN_YOUTUBE_FRIENDLY_ARTISTS = {
+    'neffex': {
+        "copyright_status": "Licensed-Friendly 🟢",
+        "risk_level": "LOW",
+        "allowed_uses": [
+            "✔ Commercial use (with attribution)",
+            "✔ Monetized videos (with attribution)",
+            "✖ Re-uploading full song as standalone audio"
+        ],
+        "recommendation": "Artist is commonly creator-friendly. Follow current attribution and usage policy.",
+        "confidence": 0.82,
+        "policy_note": "Known creator-friendly artist policy match"
+    }
+}
+
+
+CREATOR_FRIENDLY_KEYWORDS = {
+    'ncs', 'no copyright', 'royalty free', 'copyright free', 'audio library',
+    'streambeats', 'creator-safe', 'non copyrighted'
+}
+
+
 def normalize_for_policy(text):
     return re.sub(r'[^a-z0-9]+', ' ', (text or '').lower()).strip()
 
@@ -555,7 +605,20 @@ def normalize_for_policy(text):
 def check_known_youtube_policy(title, artist):
     norm_title = normalize_for_policy(title)
     norm_artist = normalize_for_policy(artist)
-    return KNOWN_YOUTUBE_FRIENDLY_TRACKS.get((norm_title, norm_artist))
+    track_policy = KNOWN_YOUTUBE_FRIENDLY_TRACKS.get((norm_title, norm_artist))
+    if track_policy:
+        return track_policy
+
+    return KNOWN_YOUTUBE_FRIENDLY_ARTISTS.get(norm_artist)
+
+
+def detect_creator_friendly_signals(title, artist, label):
+    combined = ' '.join([
+        normalize_for_policy(title),
+        normalize_for_policy(artist),
+        normalize_for_policy(label)
+    ])
+    return any(keyword in combined for keyword in CREATOR_FRIENDLY_KEYWORDS)
 
 
 def check_music_copyright(title, artist=''):
@@ -570,14 +633,21 @@ def check_music_copyright(title, artist=''):
     resolved_title = preferred.get('title') or musicbrainz.get('title') or title
     label = preferred.get('label') or musicbrainz.get('label')
 
-    status = determine_music_copyright_status(release_year)
+    metadata_quality = max(preferred.get('confidence', 0.0), musicbrainz.get('confidence', 0.0))
+    creator_friendly_signal = detect_creator_friendly_signals(resolved_title, resolved_artist, label)
+
+    status = determine_music_copyright_status(
+        release_year,
+        metadata_quality=metadata_quality,
+        creator_friendly=creator_friendly_signal
+    )
 
     # Policy override for known creator-friendly tracks.
     policy_override = check_known_youtube_policy(resolved_title, resolved_artist)
     if policy_override:
         status = policy_override
 
-    confidence = max(status.get('confidence', 0.0), preferred.get('confidence', 0.0), musicbrainz.get('confidence', 0.0))
+    confidence = max(status.get('confidence', 0.0), metadata_quality)
 
     sources = [
         {
@@ -599,8 +669,8 @@ def check_music_copyright(title, artist=''):
         {
             "name": "SCET Policy Rules",
             "url": None,
-            "used": bool(policy_override),
-            "note": status.get("policy_note") if policy_override else "No policy override match"
+            "used": bool(policy_override or creator_friendly_signal),
+            "note": status.get("policy_note") if (policy_override or creator_friendly_signal) else "No policy override match"
         }
     ]
 
@@ -615,6 +685,7 @@ def check_music_copyright(title, artist=''):
         "recommendation": status["recommendation"],
         "confidence_score": round(min(1.0, confidence), 2),
         "sources": sources,
+        "analysis_mode": "metadata-rule-engine-v2",
         "legal_notice": "Metadata-only analysis. No music downloading, streaming, or storage is performed.",
         "analyzed_at": datetime.now().isoformat()
     }
