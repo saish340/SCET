@@ -1510,12 +1510,38 @@ body {
 .youtube-check-box {
     display: grid;
     gap: var(--space-4);
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 26px;
+    border-radius: 20px;
 }
 
 .youtube-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-3);
+}
+
+.youtube-check-page .search-container {
+    max-width: 1100px;
+}
+
+.youtube-check-page .search-input {
+    font-size: 17px;
+    padding: 20px 0;
+}
+
+.youtube-check-page .search-input-wrapper {
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.youtube-check-page .input-label {
+    text-align: center;
+}
+
+.youtube-check-page .youtube-form-grid .input-group:first-child {
+    grid-column: 1 / -1;
 }
 
 .input-group {
@@ -1531,32 +1557,88 @@ body {
 
 .youtube-check-actions {
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 .youtube-check-btn {
-    min-width: 220px;
+    min-width: 260px;
+    height: 54px;
 }
 
 .youtube-legal-note {
     margin: 0;
     color: var(--gray-500);
     font-size: 13px;
+    text-align: center;
+}
+
+.youtube-disclaimer-note {
+    margin-top: 10px;
+    color: var(--text-tertiary);
+    text-align: center;
+    font-size: 13px;
 }
 
 .music-result-card .smart-tag {
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(12px);
+}
+
+.youtube-result-card {
+    transition: all 0.2s ease;
+}
+
+.youtube-result-card:hover {
+    transform: translateY(-4px);
+    border-color: #2b3b52;
+}
+
+.youtube-media-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.youtube-thumb {
+    width: 88px;
+    height: 88px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 1px solid #2b3a50;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.youtube-media-title {
+    font-size: 22px;
+    line-height: 1.3;
+    color: #f8fbff;
+    margin-bottom: 4px;
+}
+
+.youtube-media-channel,
+.youtube-media-artist {
+    font-size: 14px;
+    color: var(--text-secondary);
 }
 
 .music-card-grid {
     display: grid;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: var(--space-4);
 }
 
 .music-row {
     color: var(--text-primary);
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    background: rgba(15, 23, 42, 0.45);
 }
 
 .music-list {
@@ -1566,9 +1648,85 @@ body {
     gap: 6px;
 }
 
+.confidence-section {
+    margin-top: 2px;
+}
+
+.yt-confidence-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #1f2937;
+    overflow: hidden;
+    border: 1px solid #2b3a50;
+}
+
+.yt-confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    transition: width 0.3s ease;
+}
+
+.yt-confidence-meta {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.yt-risk-note {
+    margin-top: 10px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+}
+
+.yt-smart-suggestion {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.08);
+    color: #fcd34d;
+    font-size: 14px;
+}
+
+.yt-smart-suggestion a {
+    color: #93c5fd;
+    margin-left: 6px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.yt-smart-suggestion a:hover {
+    text-decoration: underline;
+}
+
+.youtube-check-btn.is-loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.youtube-check-btn.is-loading .btn-text::after {
+    content: '...';
+}
+
 @media (max-width: 768px) {
     .youtube-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .youtube-check-page .youtube-form-grid .input-group:first-child {
+        grid-column: auto;
+    }
+
+    .youtube-media-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .youtube-thumb {
+        width: 100%;
+        max-width: 220px;
+        height: auto;
+        aspect-ratio: 1 / 1;
     }
 
     .youtube-check-btn {
