@@ -8,12 +8,17 @@ const resultSection = document.getElementById('ytResultSection');
 const resultCard = document.getElementById('ytResultCard');
 
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const YT_API_KEY = (window.SCET_YOUTUBE_API_KEY || (window.SCET_CONFIG && window.SCET_CONFIG.youtubeApiKey) || '').trim();
 
 const RISK_KEYWORDS = {
     high: ['vevo', 'official', 'official music video'],
     claim: ['remix', 'lyrics', 'cover'],
     safe: ['ncs', 'no copyright', 'free music']
 };
+
+const LICENSE_KEYWORDS = ['licensed to youtube by', 'copyright', 'all rights reserved'];
+const FREE_SOURCES = ['nocopyrightsounds', 'ncs', 'pixabay music', 'free music'];
+const HIGH_RISK_ARTISTS = ['ed sheeran', 'taylor swift', 'drake', 'imagine dragons', 'ariana grande'];
 
 checkBtn.addEventListener('click', runYoutubeCheck);
 songInput.addEventListener('keypress', (e) => {
@@ -37,15 +42,16 @@ async function runYoutubeCheck() {
     resultSection.classList.add('hidden');
 
     try {
-        const params = new URLSearchParams({ title, artist });
-        const response = await fetch(`${API_BASE}/api/youtube-check?${params.toString()}`);
-        const data = await response.json();
+        const [data, ytMeta] = await Promise.all([
+            fetchBaseAssessment(title, artist),
+            fetchYouTubeMetadata(`${title} ${artist}`.trim())
+        ]);
 
-        if (!response.ok || data.error) {
-            throw new Error(data.error || 'Failed to check copyright');
+        if (!data || data.error) {
+            throw new Error((data && data.error) || 'Failed to check copyright');
         }
 
-        const enhanced = buildEnhancedResult(data, title, artist);
+        const enhanced = buildEnhancedResult(data, ytMeta, title, artist);
         renderMusicResultCard(enhanced);
         resultSection.classList.remove('hidden');
         resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -56,89 +62,192 @@ async function runYoutubeCheck() {
     }
 }
 
-function buildEnhancedResult(data, queryTitle, queryArtist) {
+async function fetchBaseAssessment(title, artist) {
+    const params = new URLSearchParams({ title, artist });
+    const response = await fetch(`${API_BASE}/api/youtube-check?${params.toString()}`);
+    const data = await response.json();
+    if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to check copyright');
+    }
+    return data;
+}
+
+async function fetchYouTubeMetadata(searchQuery) {
+    if (!YT_API_KEY) {
+        return { available: false, reason: 'YouTube API key not configured' };
+    }
+
+    try {
+        const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+        searchUrl.searchParams.set('part', 'snippet');
+        searchUrl.searchParams.set('type', 'video');
+        searchUrl.searchParams.set('maxResults', '1');
+        searchUrl.searchParams.set('q', searchQuery);
+        searchUrl.searchParams.set('key', YT_API_KEY);
+
+        const searchResp = await fetch(searchUrl.toString());
+        if (!searchResp.ok) {
+            throw new Error('YouTube search failed');
+        }
+        const searchData = await searchResp.json();
+        const firstItem = searchData.items && searchData.items[0];
+        if (!firstItem || !firstItem.id || !firstItem.id.videoId) {
+            return { available: false, reason: 'No YouTube video match' };
+        }
+
+        const videoId = firstItem.id.videoId;
+        const videoUrl = new URL('https://www.googleapis.com/youtube/v3/videos');
+        videoUrl.searchParams.set('part', 'snippet,statistics');
+        videoUrl.searchParams.set('id', videoId);
+        videoUrl.searchParams.set('key', YT_API_KEY);
+
+        const videoResp = await fetch(videoUrl.toString());
+        if (!videoResp.ok) {
+            throw new Error('YouTube video metadata fetch failed');
+        }
+        const videoData = await videoResp.json();
+        const item = videoData.items && videoData.items[0];
+        if (!item) {
+            return { available: false, reason: 'No YouTube video detail' };
+        }
+
+        const snippet = item.snippet || {};
+        const statistics = item.statistics || {};
+        return {
+            available: true,
+            videoId,
+            title: snippet.title || '',
+            channelTitle: snippet.channelTitle || '',
+            description: snippet.description || '',
+            viewCount: Number(statistics.viewCount || 0),
+            thumbnail: (snippet.thumbnails && (snippet.thumbnails.high || snippet.thumbnails.medium || snippet.thumbnails.default || {}).url) || ''
+        };
+    } catch (error) {
+        return { available: false, reason: error.message || 'YouTube metadata unavailable' };
+    }
+}
+
+function buildEnhancedResult(data, ytMeta, queryTitle, queryArtist) {
     const extractedArtist = (data.artist && data.artist !== 'Unknown')
         ? data.artist
         : extractArtistFromQuery(queryTitle, queryArtist);
 
-    const inferredChannel = inferChannelName(data, extractedArtist);
-    const localSignals = evaluateRiskSignals(queryTitle, extractedArtist, inferredChannel, data.song || queryTitle);
-    const mergedRisk = mergeRisk(localSignals, data.youtube_usage_risk || 'MEDIUM', data.confidence_score || 0);
+    const inferredChannel = ytMeta.available ? ytMeta.channelTitle : inferChannelName(data, extractedArtist);
+    const riskEstimation = estimateRisk({
+        inputTitle: queryTitle,
+        inputArtist: queryArtist,
+        resultTitle: data.song || queryTitle,
+        extractedArtist,
+        channelTitle: inferredChannel,
+        description: ytMeta.description || '',
+        viewCount: ytMeta.viewCount || 0
+    });
+
+    const mergedRisk = mergeRisk(riskEstimation, data.youtube_usage_risk || 'MEDIUM', data.confidence_score || 0);
 
     return {
         ...data,
         extracted_artist: extractedArtist || 'Unknown',
         inferred_channel: inferredChannel,
+        youtube_meta_available: !!ytMeta.available,
+        youtube_meta_note: ytMeta.available ? 'YouTube Data API v3 metadata analyzed in real-time.' : (ytMeta.reason || 'YouTube metadata unavailable'),
+        youtube_view_count: ytMeta.viewCount || 0,
         risk_level: mergedRisk.level,
         risk_badge_text: mergedRisk.badge,
         risk_note: mergedRisk.note,
+        risk_score: mergedRisk.score,
+        reason_breakdown: mergedRisk.reasons,
         confidence_label: mergedRisk.confidenceLabel,
         confidence_visual: mergedRisk.confidenceVisual,
         confidence_score: mergedRisk.confidenceScore,
-        thumbnail_url: buildThumbnailUrl(data.song || queryTitle, extractedArtist || queryArtist),
+        thumbnail_url: ytMeta.thumbnail || buildThumbnailUrl(data.song || queryTitle, extractedArtist || queryArtist),
         suggestion: mergedRisk.level === 'HIGH'
             ? 'This song is likely copyrighted. Try using no-copyright alternatives.'
             : ''
     };
 }
 
-function evaluateRiskSignals(queryTitle, artist, channelTitle, resultTitle) {
-    const normalized = [queryTitle, artist, channelTitle, resultTitle]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+function estimateRisk(ctx) {
+    let score = 35;
+    const reasons = [];
 
-    const highMatches = countKeywordMatches(normalized, RISK_KEYWORDS.high);
-    const claimMatches = countKeywordMatches(normalized, RISK_KEYWORDS.claim);
-    const safeMatches = countKeywordMatches(normalized, RISK_KEYWORDS.safe);
+    const channel = (ctx.channelTitle || '').toLowerCase();
+    const title = (ctx.resultTitle || ctx.inputTitle || '').toLowerCase();
+    const description = (ctx.description || '').toLowerCase();
+    const artist = (ctx.extractedArtist || ctx.inputArtist || '').toLowerCase();
 
-    if (safeMatches > 0) {
-        return { level: 'LOW', strength: safeMatches >= 2 ? 'HIGH' : 'MEDIUM', reason: 'Safe-use keywords detected' };
+    const isOfficialChannel = containsAny(channel, RISK_KEYWORDS.high)
+        || (artist && channel.includes(artist));
+    if (isOfficialChannel || title.includes('official music video')) {
+        score += 50;
+        reasons.push('Official channel or official music video signal detected');
     }
 
-    if (highMatches > 0) {
-        return { level: 'HIGH', strength: highMatches >= 2 ? 'HIGH' : 'MEDIUM', reason: 'Official/VEVO signal detected' };
+    if (containsAny(description, LICENSE_KEYWORDS)) {
+        score += 30;
+        reasons.push('Licensed/copyright text found in description');
     }
 
-    if (claimMatches > 0) {
-        return { level: 'CLAIM', strength: claimMatches >= 2 ? 'HIGH' : 'MEDIUM', reason: 'Remix/lyrics/cover signal detected' };
+    if ((ctx.viewCount || 0) > 1000000) {
+        score += 10;
+        reasons.push('High popularity (>1M views) increases claim likelihood');
     }
 
-    return { level: 'UNKNOWN', strength: 'LOW', reason: 'Weak keyword signal' };
+    if (containsAny(title, RISK_KEYWORDS.claim)) {
+        score += 15;
+        reasons.push('Remix/lyrics/cover keyword detected');
+    }
+
+    const freeSourceHit = containsAny(channel, FREE_SOURCES)
+        || containsAny(title, RISK_KEYWORDS.safe)
+        || containsAny(title, ['no copyright']);
+    if (freeSourceHit) {
+        score -= 60;
+        reasons.push('Free music source/no-copyright marker detected');
+    }
+
+    if (matchesHighRiskArtist(title, artist)) {
+        score += 35;
+        reasons.push('High-risk mainstream artist detected');
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    const level = score > 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
+
+    return {
+        score,
+        level,
+        reasons: reasons.length ? reasons : ['Limited public signals detected']
+    };
 }
 
 function mergeRisk(signal, apiRisk, apiConfidence) {
     const normalizedApi = (apiRisk || 'MEDIUM').toUpperCase();
-    let finalLevel = normalizedApi;
-    let note = 'Estimated from metadata signals and API response.';
+    const apiScore = normalizedApi === 'HIGH' ? 80 : normalizedApi === 'LOW' ? 25 : 55;
+    const combinedScore = Math.round((signal.score * 0.7) + (apiScore * 0.3));
 
-    if (signal.level === 'LOW') {
+    let finalLevel = combinedScore > 70 ? 'HIGH' : combinedScore >= 40 ? 'MEDIUM' : 'LOW';
+    if (normalizedApi === 'LOW' && combinedScore < 60) {
         finalLevel = 'LOW';
-        note = signal.reason;
-    } else if (signal.level === 'HIGH') {
-        finalLevel = 'HIGH';
-        note = signal.reason;
-    } else if (signal.level === 'CLAIM') {
-        finalLevel = 'CLAIM';
-        note = signal.reason;
     }
 
-    const confidenceVisual = signal.strength === 'HIGH' ? 88 : signal.strength === 'MEDIUM' ? 72 : 56;
-    const confidenceLabel = signal.strength === 'HIGH' ? 'High' : signal.strength === 'MEDIUM' ? 'Medium' : 'Low';
+    const note = 'Estimated from metadata signals and API response.';
+    const confidenceVisual = combinedScore > 70 ? 90 : combinedScore >= 40 ? 72 : 58;
+    const confidenceLabel = combinedScore > 70 ? 'High' : combinedScore >= 40 ? 'Medium' : 'Low';
     const confidenceScore = Math.max(Number(apiConfidence || 0), confidenceVisual / 100);
 
     const badge = finalLevel === 'HIGH'
         ? '🔴 High Risk'
         : finalLevel === 'LOW'
             ? '🟢 Safe to Use'
-            : finalLevel === 'CLAIM'
-                ? '🟡 Possible Content ID Claim'
-                : '🟡 Medium Risk';
+            : '🟡 Possible Content ID Claim';
 
     return {
         level: finalLevel,
         badge,
         note,
+        score: combinedScore,
+        reasons: signal.reasons,
         confidenceLabel,
         confidenceVisual,
         confidenceScore: Number(confidenceScore.toFixed(2))
@@ -182,11 +291,24 @@ function renderMusicResultCard(data) {
             </div>
 
             <div class="tag-section confidence-section">
-                <h4>Confidence</h4>
+                <h4>Risk Meter</h4>
+                <div class="yt-risk-meter-track">
+                    <div class="yt-risk-meter-fill ${riskClass}" style="width: ${data.risk_score || 0}%"></div>
+                </div>
+                <p class="yt-risk-score">[${buildMeterBlocks(data.risk_score || 0)}] ${data.risk_score || 0}%</p>
+                <h4 class="yt-confidence-title">Confidence</h4>
                 <div class="yt-confidence-track">
                     <div class="yt-confidence-fill" style="width: ${data.confidence_visual || 56}%"></div>
                 </div>
                 <p class="yt-confidence-meta">${escapeHtml(data.confidence_label || 'Low')} confidence (${escapeHtml(String(data.confidence_score || 0))})</p>
+            </div>
+
+            <div class="tag-section">
+                <h4>Why this result</h4>
+                <ul class="yt-reason-list">
+                    ${(data.reason_breakdown || []).map((reason) => `<li>${escapeHtml(reason)}</li>`).join('')}
+                </ul>
+                <p class="yt-meta-note">${escapeHtml(data.youtube_meta_note || '')}</p>
             </div>
 
             <div class="tag-section">
@@ -223,6 +345,21 @@ function renderMusicResultCard(data) {
 
 function countKeywordMatches(text, keywords) {
     return keywords.reduce((count, keyword) => count + (text.includes(keyword.toLowerCase()) ? 1 : 0), 0);
+}
+
+function containsAny(text, keywords) {
+    const normalized = (text || '').toLowerCase();
+    return keywords.some((keyword) => normalized.includes(keyword.toLowerCase()));
+}
+
+function matchesHighRiskArtist(title, artist) {
+    const blob = `${title || ''} ${artist || ''}`.toLowerCase();
+    return HIGH_RISK_ARTISTS.some((name) => blob.includes(name.toLowerCase()));
+}
+
+function buildMeterBlocks(score) {
+    const filled = Math.max(0, Math.min(10, Math.round(score / 10)));
+    return '█'.repeat(filled) + '░'.repeat(10 - filled);
 }
 
 function extractArtistFromQuery(title, artist) {

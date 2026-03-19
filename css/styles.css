@@ -1672,6 +1672,61 @@ body {
     font-size: 13px;
 }
 
+.yt-confidence-title {
+    margin-top: 14px;
+}
+
+.yt-risk-meter-track {
+    height: 12px;
+    border-radius: 999px;
+    background: #1f2937;
+    overflow: hidden;
+    border: 1px solid #2b3a50;
+    margin-bottom: 8px;
+}
+
+.yt-risk-meter-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.yt-risk-meter-fill.badge-protected {
+    background: linear-gradient(90deg, #dc2626, #ef4444);
+}
+
+.yt-risk-meter-fill.badge-unknown {
+    background: linear-gradient(90deg, #ca8a04, #f59e0b);
+}
+
+.yt-risk-meter-fill.badge-public {
+    background: linear-gradient(90deg, #059669, #10b981);
+}
+
+.yt-risk-score {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    letter-spacing: 0.02em;
+}
+
+.yt-reason-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+}
+
+.yt-reason-list li {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.yt-meta-note {
+    margin-top: 8px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+}
+
 .yt-risk-note {
     margin-top: 10px;
     color: var(--text-tertiary);
