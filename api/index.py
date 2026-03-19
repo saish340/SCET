@@ -74,6 +74,13 @@ def adjust_wikipedia_similarity(query, title, snippet, base_similarity):
     if 'cham' in query_l and 'challo' in query_l and ('ra one' in combined or 'ra.one' in combined):
         adjusted += 0.25
 
+    # If query explicitly asks for Chamak/Chammak Challo, prioritize that page.
+    if 'cham' in query_l and 'challo' in query_l:
+        if 'chammak challo' in title_l or 'chamak challo' in title_l:
+            adjusted += 0.35
+        elif 'challo' not in combined:
+            adjusted -= 0.25
+
     return max(0.0, min(1.0, round(adjusted, 2)))
 
 def extract_year(text):
