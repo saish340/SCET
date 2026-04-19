@@ -6,9 +6,16 @@ const REPORT_STORAGE_KEY = 'scet:last-report';
 
 document.addEventListener('DOMContentLoaded', () => {
     const shareBtn = document.getElementById('shareReportBtn');
+    const printBtn = document.getElementById('printReportBtn');
+
     if (shareBtn) {
         shareBtn.addEventListener('click', copyReportLink);
     }
+
+    if (printBtn) {
+        printBtn.addEventListener('click', () => window.print());
+    }
+
     loadReport();
 });
 
@@ -76,6 +83,7 @@ function renderReport(data) {
     setText('expiryDate', tag.expiry_tag || data.expiry_date || 'Not determined');
     setText('yearsRemaining', deriveYearsRemaining(tag));
     setText('confidenceScore', `${Math.round(confidence * 100)}%`);
+    setText('confidenceBadgeText', buildConfidenceLabel(confidence));
     setStyle('confidenceFill', 'width', `${confidence * 100}%`);
     setText(
         'confidenceExplanation',
@@ -102,7 +110,11 @@ function renderReport(data) {
 
 function renderFallbackPayload(payload) {
     const pseudoStatus = payload.status || 'UNKNOWN';
-    const statusClass = pseudoStatus === 'PUBLIC_DOMAIN' ? 'badge-public' : pseudoStatus === 'PROTECTED' ? 'badge-protected' : 'badge-unknown';
+    const statusClass = pseudoStatus === 'PUBLIC_DOMAIN'
+        ? 'badge-public'
+        : pseudoStatus === 'PROTECTED'
+            ? 'badge-protected'
+            : 'badge-unknown';
 
     setText('reportTitle', `Copyright Validation Report: ${payload.title}`);
     setText('workTitle', payload.title);
@@ -113,6 +125,7 @@ function renderFallbackPayload(payload) {
     setText('reportJurisdiction', prettyJurisdiction(payload.jurisdiction || 'US'));
     setText('dataSource', payload.source || 'Multiple Sources');
     setText('statusText', 'Basic report details were restored from local data. Open the report again online for full reasoning and confidence.');
+    setText('confidenceBadgeText', 'Stored local snapshot');
     renderPillList('allowedUsesList', []);
     renderSources('sourcesList', [{ name: payload.source || 'Stored report snapshot', url: payload.source_url || '' }]);
 }
@@ -148,21 +161,23 @@ function renderSources(targetId, sources) {
         return;
     }
 
-    target.innerHTML = sources.filter((source) => source && (source.used !== false)).map((source) => {
-        const name = escapeHtml(source.name || 'Source');
-        if (source.url) {
+    target.innerHTML = sources
+        .filter((source) => source && (source.used !== false))
+        .map((source) => {
+            const name = escapeHtml(source.name || 'Source');
+            if (source.url) {
+                return `
+                    <a class="source-item" href="${escapeHtml(source.url)}" target="_blank" rel="noopener">
+                        <span class="source-name">${name}</span>
+                    </a>
+                `;
+            }
             return `
-                <a class="source-item" href="${escapeHtml(source.url)}" target="_blank" rel="noopener">
+                <div class="source-item">
                     <span class="source-name">${name}</span>
-                </a>
+                </div>
             `;
-        }
-        return `
-            <div class="source-item">
-                <span class="source-name">${name}</span>
-            </div>
-        `;
-    }).join('') || '<div class="source-item"><span class="source-name">No source list available</span></div>';
+        }).join('') || '<div class="source-item"><span class="source-name">No source list available</span></div>';
 }
 
 function deriveYearsRemaining(tag) {
@@ -176,16 +191,15 @@ function deriveYearsRemaining(tag) {
     return match ? match[1] : tag.expiry_info;
 }
 
+function buildConfidenceLabel(score) {
+    if (score >= 0.8) return 'High confidence assessment';
+    if (score >= 0.6) return 'Moderate confidence assessment';
+    return 'Limited-confidence estimate';
+}
+
 async function copyReportLink() {
     await navigator.clipboard.writeText(window.location.href);
-    const button = document.getElementById('shareReportBtn');
-    if (button) {
-        const original = button.textContent;
-        button.textContent = 'Link Copied';
-        setTimeout(() => {
-            button.textContent = original;
-        }, 1200);
-    }
+    showToast('Report link copied to clipboard.', 'success');
 }
 
 function prettyStatus(value) {
@@ -224,6 +238,30 @@ function setStyle(id, property, value) {
     if (element) {
         element.style[property] = value;
     }
+}
+
+function showToast(message, type) {
+    let region = document.getElementById('toastRegion');
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'toastRegion';
+        region.className = 'toast-region';
+        document.body.appendChild(region);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type || 'info'}`;
+    toast.textContent = message;
+    region.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('is-visible');
+    });
+
+    setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 220);
+    }, 2200);
 }
 
 function escapeHtml(text) {

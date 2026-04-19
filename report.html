@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Copyright Validation Report - SCET</title>
-    <link rel="stylesheet" href="css/styles.css?v=4.0.0">
+    <link rel="stylesheet" href="css/styles.css?v=4.1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container report-page">
         <header class="header">
             <div class="header-container">
                 <div class="logo">
@@ -29,131 +29,122 @@
         </header>
 
         <main class="main-content">
-            <section class="page-header">
-                <div class="container">
+            <section class="page-header report-page-header">
+                <div class="container report-hero-container">
+                    <span class="page-eyebrow">Shareable validation report</span>
                     <h1 class="page-title" id="reportTitle">Copyright Validation Report</h1>
-                    <p class="page-subtitle">Detailed copyright analysis and status prediction</p>
+                    <p class="page-subtitle">A cleaner summary of the selected work, its estimated status, supporting signals, and reporting metadata.</p>
                 </div>
             </section>
 
-            <section class="about-section">
-                <div class="container">
-                    <div class="content-section">
-                        <div class="report-card">
-                            <div class="report-header">
-                                <div class="report-title-section">
-                                    <h2 class="report-work-title" id="workTitle">Work Title</h2>
-                                    <p class="report-creator" id="workCreator">Creator Name</p>
+            <section class="about-section report-main-section">
+                <div class="container report-layout">
+                    <aside class="report-summary-panel">
+                        <div class="report-summary-card">
+                            <p class="report-summary-label">Status at a glance</p>
+                            <div id="statusBadge" class="report-summary-badge">
+                                <span class="result-badge badge-unknown">Unknown</span>
+                            </div>
+                            <h2 class="report-summary-title" id="workTitle">Work Title</h2>
+                            <p class="report-summary-subtitle" id="workCreator">Creator Name</p>
+
+                            <div class="report-summary-grid">
+                                <div class="report-summary-item">
+                                    <span class="report-summary-item-label">Publication year</span>
+                                    <span class="report-summary-item-value" id="pubYear">Unknown</span>
                                 </div>
-                                <div class="report-status-badge" id="statusBadge">
-                                    <span class="result-badge badge-unknown">UNKNOWN</span>
+                                <div class="report-summary-item">
+                                    <span class="report-summary-item-label">Content type</span>
+                                    <span class="report-summary-item-value" id="reportContentType">Unknown</span>
+                                </div>
+                                <div class="report-summary-item">
+                                    <span class="report-summary-item-label">Jurisdiction</span>
+                                    <span class="report-summary-item-value" id="reportJurisdiction">United States</span>
+                                </div>
+                                <div class="report-summary-item">
+                                    <span class="report-summary-item-label">Source</span>
+                                    <span class="report-summary-item-value" id="dataSource">Multiple Sources</span>
                                 </div>
                             </div>
 
-                            <div class="report-metadata">
-                                <div class="report-meta-item">
-                                    <span class="meta-label">Publication Year</span>
-                                    <span class="meta-value" id="pubYear">Unknown</span>
+                            <div class="report-summary-block">
+                                <span class="report-summary-block-label">Confidence</span>
+                                <div class="confidence-bar report-summary-confidence">
+                                    <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
                                 </div>
-                                <div class="report-meta-item">
-                                    <span class="meta-label">Content Type</span>
-                                    <span class="meta-value" id="reportContentType">Unknown</span>
-                                </div>
-                                <div class="report-meta-item">
-                                    <span class="meta-label">Jurisdiction</span>
-                                    <span class="meta-value" id="reportJurisdiction">United States</span>
-                                </div>
-                                <div class="report-meta-item">
-                                    <span class="meta-label">Data Source</span>
-                                    <span class="meta-value" id="dataSource">Multiple Sources</span>
+                                <div class="report-summary-confidence-meta">
+                                    <span id="confidenceScore">0%</span>
+                                    <span id="confidenceBadgeText">Assessment confidence</span>
                                 </div>
                             </div>
 
-                            <div class="report-section">
-                                <h3 class="report-section-title">Copyright Status</h3>
-                                <div class="report-status-details">
-                                    <p class="status-text" id="statusText">
-                                        Copyright status analysis will appear here based on available data and legal rules.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="report-section">
-                                <h3 class="report-section-title">Expiry Information</h3>
-                                <div class="expiry-info">
-                                    <div class="expiry-item">
-                                        <span class="expiry-label">Copyright Expiry Date</span>
-                                        <span class="expiry-value" id="expiryDate">Not determined</span>
-                                    </div>
-                                    <div class="expiry-item">
-                                        <span class="expiry-label">Years Remaining</span>
-                                        <span class="expiry-value" id="yearsRemaining">N/A</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="report-section">
-                                <h3 class="report-section-title">Confidence Score</h3>
-                                <div class="confidence-container">
-                                    <div class="confidence-bar-wrapper">
-                                        <div class="confidence-bar">
-                                            <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
-                                        </div>
-                                        <span class="confidence-percentage" id="confidenceScore">0%</span>
-                                    </div>
-                                    <p class="confidence-explanation" id="confidenceExplanation">
-                                        Confidence score indicates reliability of this prediction based on data quality and completeness.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="report-section">
-                                <h3 class="report-section-title">Legal Reasoning</h3>
-                                <div class="reasoning-box" id="reasoningBox">
-                                    <p>The system applies copyright rules based on:</p>
-                                    <ul>
-                                        <li>Publication year and jurisdiction-specific public domain cutoff dates</li>
-                                        <li>Creator information and statutory term assumptions</li>
-                                        <li>Work type and applicable copyright duration rules</li>
-                                        <li>Available registry or metadata source signals</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="report-section">
-                                <h3 class="report-section-title">Allowed Uses</h3>
-                                <div class="sources-list" id="allowedUsesList"></div>
-                            </div>
-
-                            <div class="report-section">
-                                <h3 class="report-section-title">Data Sources Consulted</h3>
-                                <div class="sources-list" id="sourcesList"></div>
-                            </div>
-
-                            <div class="report-section">
-                                <div class="novelty-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%); border-color: #ef4444;">
-                                    <h4 class="novelty-title" style="color: #fca5a5;">Legal Disclaimer</h4>
-                                    <p class="novelty-text" style="font-style: normal;">
-                                        This report is for informational purposes only and does not constitute legal advice.
-                                        Copyright status should be verified through official channels and reviewed by qualified
-                                        legal professionals before making any decisions. See our full
-                                        <a href="disclaimer.html" style="color: #f87171;">disclaimer</a>.
-                                    </p>
-                                </div>
+                            <div class="report-actions">
+                                <a href="search.html" class="btn-primary report-action-link">Back to Search</a>
+                                <button id="shareReportBtn" class="btn-secondary report-action-btn" type="button">Copy Report Link</button>
+                                <button id="printReportBtn" class="btn-secondary report-action-btn" type="button">Print Report</button>
                             </div>
                         </div>
-                    </div>
+                    </aside>
 
-                    <div class="content-section" style="text-align: center;">
-                        <a href="search.html" class="btn-primary" style="display: inline-block; padding: 12px 24px; background: var(--primary-color); color: white; text-decoration: none; border-radius: var(--radius-md); font-weight: 600;">
-                            ← Back to Search
-                        </a>
-                        <button id="shareReportBtn" class="btn-secondary" style="margin-left: var(--space-2); padding: 12px 24px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
-                            Copy Report Link
-                        </button>
-                        <button onclick="window.print()" class="btn-secondary" style="margin-left: var(--space-2); padding: 12px 24px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
-                            Print Report
-                        </button>
+                    <div class="report-content-panel">
+                        <div class="content-section report-content-shell">
+                            <div class="report-card report-card-refined">
+                                <section class="report-section report-section-intro">
+                                    <h3 class="report-section-title">Executive Summary</h3>
+                                    <p class="report-lead" id="statusText">Copyright status analysis will appear here based on available data and legal rules.</p>
+                                    <p class="confidence-explanation" id="confidenceExplanation">Confidence score indicates reliability of this prediction based on data quality and completeness.</p>
+                                </section>
+
+                                <section class="report-section">
+                                    <h3 class="report-section-title">Expiry Information</h3>
+                                    <div class="expiry-info">
+                                        <div class="expiry-item">
+                                            <span class="expiry-label">Estimated expiry</span>
+                                            <span class="expiry-value" id="expiryDate">Not determined</span>
+                                        </div>
+                                        <div class="expiry-item">
+                                            <span class="expiry-label">Years remaining</span>
+                                            <span class="expiry-value" id="yearsRemaining">N/A</span>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="report-section">
+                                    <h3 class="report-section-title">Legal Reasoning</h3>
+                                    <div class="reasoning-box" id="reasoningBox">
+                                        <p>The system applies copyright rules based on:</p>
+                                        <ul>
+                                            <li>Publication year and jurisdiction-specific public-domain cutoffs</li>
+                                            <li>Creator information and term assumptions</li>
+                                            <li>Work type and available metadata signals</li>
+                                            <li>Registry or reference-source evidence where available</li>
+                                        </ul>
+                                    </div>
+                                </section>
+
+                                <section class="report-section">
+                                    <h3 class="report-section-title">Allowed Uses Summary</h3>
+                                    <div class="sources-list" id="allowedUsesList"></div>
+                                </section>
+
+                                <section class="report-section">
+                                    <h3 class="report-section-title">Sources Consulted</h3>
+                                    <div class="sources-list" id="sourcesList"></div>
+                                </section>
+
+                                <section class="report-section report-section-disclaimer">
+                                    <div class="novelty-card report-disclaimer-card">
+                                        <h4 class="novelty-title report-disclaimer-title">Important Disclaimer</h4>
+                                        <p class="novelty-text report-disclaimer-text">
+                                            This report is informational only and does not constitute legal advice.
+                                            Copyright status should be verified through official channels and reviewed by
+                                            qualified legal professionals before making any real legal or commercial decision.
+                                            See the full <a href="disclaimer.html" class="report-inline-link">disclaimer</a>.
+                                        </p>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -1,7 +1,6 @@
 /**
  * SCET Frontend Application
- * Copyright Status Tag - JavaScript
- * Version 4.0 - Search, report, and history enhancements
+ * UI/UX refresh without changing backend behavior
  */
 
 const API_BASE = window.location.hostname === 'localhost'
@@ -30,6 +29,9 @@ const suggestionsList = document.getElementById('suggestionsList');
 const smartTagSection = document.getElementById('smartTagSection');
 const smartTagContainer = document.getElementById('smartTagContainer');
 const recentReports = document.getElementById('recentReports');
+const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+const searchFiltersPanel = document.getElementById('searchFiltersPanel');
+const resultsMetaText = document.getElementById('resultsMetaText');
 
 let currentSearchId = null;
 let selectedWorkId = null;
@@ -60,9 +62,14 @@ if (correctedQuery) {
     });
 }
 
+if (toggleFiltersBtn && searchFiltersPanel) {
+    toggleFiltersBtn.addEventListener('click', toggleFiltersPanelVisibility);
+}
+
 async function performSearch() {
     const query = (searchInput && searchInput.value.trim()) || '';
     if (!query) {
+        showToast('Enter a title first to start the search.', 'info');
         return;
     }
 
@@ -78,7 +85,9 @@ async function performSearch() {
     }
 
     showLoading();
-    hideElements([searchResults, smartTagSection, suggestions, correctionNotice, aiExplanation]);
+    hideElements([smartTagSection, suggestions, correctionNotice, aiExplanation]);
+    renderSearchSkeletons();
+    setResultsMeta(`${buildSearchContextText()} Looking up the strongest matches now.`);
 
     try {
         const params = new URLSearchParams({
@@ -110,16 +119,18 @@ function displaySearchResults(data) {
 
     if (data.results && data.results.length > 0) {
         resultsList.innerHTML = '';
-        data.results.forEach((result) => {
-            resultsList.appendChild(createResultElement(result));
+        data.results.forEach((result, index) => {
+            resultsList.appendChild(createResultElement(result, index));
         });
         searchResults.classList.remove('hidden');
+        setResultsMeta(`Showing ${data.total_results || data.results.length} likely match${(data.total_results || data.results.length) === 1 ? '' : 'es'}. Select one result to open the detailed assessment.`);
     } else {
         const fallbackNote = data.filter_applied && data.fallback_to_broad_results
             ? 'No exact matches for this content type, so SCET is showing the closest broader matches.'
-            : 'No results found. Try a different search term.';
+            : 'No results found. Try a different search term or broaden the filters.';
         resultsList.innerHTML = `<p class="no-results">${escapeHtml(fallbackNote)}</p>`;
         searchResults.classList.remove('hidden');
+        setResultsMeta('No strong matches yet. Try a broader title or reduce the filter scope.');
     }
 
     renderSuggestions(data.suggestions || []);
@@ -167,8 +178,9 @@ function renderSuggestions(items) {
     }
 
     items.forEach((suggestion) => {
-        const tag = document.createElement('span');
+        const tag = document.createElement('button');
         tag.className = 'suggestion-tag';
+        tag.type = 'button';
         tag.textContent = suggestion;
         tag.addEventListener('click', () => {
             searchInput.value = suggestion;
@@ -180,10 +192,13 @@ function renderSuggestions(items) {
     suggestions.classList.remove('hidden');
 }
 
-function createResultElement(result) {
-    const div = document.createElement('div');
-    div.className = 'result-card';
-    div.onclick = () => selectResult(result);
+function createResultElement(result, index) {
+    const div = document.createElement('button');
+    div.className = 'result-card result-card-refined';
+    div.type = 'button';
+    div.dataset.resultId = result.id;
+    div.setAttribute('aria-pressed', 'false');
+    div.addEventListener('click', () => selectResult(result));
 
     const status = String(result.copyright_status || 'UNKNOWN').toUpperCase();
     const statusBadgeClass = status === 'PROTECTED'
@@ -192,19 +207,27 @@ function createResultElement(result) {
             ? 'badge-public'
             : 'badge-unknown';
 
+    const sourceText = result.source || 'Metadata source';
+    const matchPercent = Math.round((result.similarity_score || 0) * 100);
+    const resultReason = buildResultReason(result, matchPercent);
+
     div.innerHTML = `
+        <div class="result-card-topline">
+            <span class="result-rank-pill">Match ${index + 1}</span>
+            <span class="similarity-score">${matchPercent}% aligned</span>
+        </div>
         <div class="result-header">
             <div>
                 <div class="result-title">${escapeHtml(result.title)}</div>
-                ${result.creator ? `<div class="result-creator">By ${escapeHtml(result.creator)}</div>` : ''}
+                ${result.creator ? `<div class="result-creator">By ${escapeHtml(result.creator)}</div>` : '<div class="result-creator">Creator not listed in this result</div>'}
             </div>
-        </div>
-        <div class="result-meta">
-            ${result.publication_year ? `<span class="result-year">📅 ${escapeHtml(String(result.publication_year))}</span>` : ''}
-            ${result.content_type ? `<span class="result-type">📑 ${escapeHtml(prettyType(result.content_type))}</span>` : ''}
-            ${result.source ? `<span class="result-source">📚 ${escapeHtml(result.source)}</span>` : ''}
             <span class="result-badge ${statusBadgeClass}">${escapeHtml(formatStatus(status))}</span>
-            <span class="similarity-score">🎯 ${Math.round((result.similarity_score || 0) * 100)}% match</span>
+        </div>
+        <p class="result-reason">${escapeHtml(resultReason)}</p>
+        <div class="result-meta">
+            ${result.publication_year ? `<span class="result-year">${escapeHtml(String(result.publication_year))}</span>` : ''}
+            ${result.content_type ? `<span class="result-type">${escapeHtml(prettyType(result.content_type))}</span>` : ''}
+            <span class="result-source">${escapeHtml(sourceText)}</span>
         </div>
     `;
 
@@ -214,8 +237,10 @@ function createResultElement(result) {
 async function selectResult(result) {
     selectedWorkId = result.id;
     selectedResultData = result;
+    markSelectedResult(result.id);
 
     showLoading();
+    setResultsMeta(`Selected "${result.title}". Preparing the full assessment now.`);
 
     try {
         const params = new URLSearchParams({
@@ -236,9 +261,10 @@ async function selectResult(result) {
         persistRecentReport(buildReportPayload());
         renderRecentReports();
         displayDetailedSmartTag(detailedTag);
+        showToast('Detailed assessment ready.', 'success');
     } catch (error) {
         console.error('Tag generation error:', error);
-        displayError('Failed to generate Smart Tag. Please try again.');
+        displayError('Failed to generate the detailed assessment. Please try again.');
     } finally {
         hideLoading();
     }
@@ -247,7 +273,7 @@ async function selectResult(result) {
 function displayDetailedSmartTag(data) {
     const tag = data.tag || {};
     const statusColor = tag.status_color || (tag.status === 'PUBLIC_DOMAIN' ? 'green' : 'red');
-    const statusEmoji = tag.status_emoji || tag.emoji || '📋';
+    const statusEmoji = tag.status_emoji || tag.emoji || 'Status';
     const statusText = tag.status_text || (tag.status === 'PUBLIC_DOMAIN' ? 'Public Domain' : 'Copyright Protected');
     const expiryTimeline = tag.expiry_timeline || tag.expiry_info || 'Unknown';
     const allowedUsesSummary = tag.allowed_uses_summary || tag.allowed_uses || [];
@@ -260,7 +286,7 @@ function displayDetailedSmartTag(data) {
 
     const recommendationsHtml = (data.recommendations || []).map((rec) => `
         <div class="recommendation-item ${rec.type || 'info'}">
-            <span class="rec-icon">${escapeHtml(rec.icon || 'ℹ️')}</span>
+            <span class="rec-icon">${escapeHtml(rec.icon || 'Info')}</span>
             <div class="rec-content">
                 <strong>${escapeHtml(rec.title || 'Recommendation')}</strong>
                 <p>${escapeHtml(rec.description || rec.text || '')}</p>
@@ -270,99 +296,102 @@ function displayDetailedSmartTag(data) {
 
     const risk = data.risk_assessment || {};
     const riskColor = risk.color || ((risk.level || '').toLowerCase() === 'low' ? '#28a745' : '#ffc107');
-    const riskIcon = risk.icon || ((risk.level || '').toLowerCase() === 'low' ? '✅' : '⚠️');
+    const riskIcon = risk.icon || ((risk.level || '').toLowerCase() === 'low' ? 'Low' : 'Watch');
     const riskHtml = `
-        <div class="risk-assessment" style="border-left: 4px solid ${riskColor}">
+        <div class="risk-assessment risk-assessment-refined" style="border-left: 4px solid ${riskColor}">
             <div class="risk-header">
                 <span class="risk-icon">${escapeHtml(riskIcon)}</span>
                 <span class="risk-level" style="color: ${riskColor}">${escapeHtml(risk.level || 'Unknown')} Risk</span>
             </div>
             <p class="risk-description">${escapeHtml(risk.description || 'Risk level not assessed.')}</p>
             <div class="risk-details">
-                <span>📊 Commercial: ${escapeHtml(risk.commercial_risk || 'Unknown')}</span>
-                <span>👤 Personal: ${escapeHtml(risk.personal_risk || 'Unknown')}</span>
+                <span>Commercial: ${escapeHtml(risk.commercial_risk || 'Unknown')}</span>
+                <span>Personal: ${escapeHtml(risk.personal_risk || 'Unknown')}</span>
             </div>
         </div>
     `;
 
     const checklistHtml = (data.legal_checklist || []).map((item) => `
         <div class="checklist-item ${item.status || (item.checked ? 'done' : 'pending')}">
-            <span class="check-icon">${item.required !== false ? '☐' : '○'}</span>
+            <span class="check-icon">${item.required !== false ? 'Required' : 'Optional'}</span>
             <span class="check-text">${escapeHtml(item.item || '')}</span>
             <span class="check-status">${escapeHtml(item.status || (item.checked ? 'done' : 'pending'))}</span>
         </div>
     `).join('');
 
     const actionsHtml = (data.quick_actions || []).map((action) => `
-        <button class="quick-action-btn" data-action="${escapeHtml(action.action)}">${escapeHtml(action.label)}</button>
+        <button class="quick-action-btn" data-action="${escapeHtml(action.action)}">${escapeHtml(cleanActionLabel(action.label))}</button>
     `).join('');
 
     smartTagContainer.innerHTML = `
-        <div class="smart-tag ${colorClass}">
-            <div class="tag-header">
-                <span class="tag-emoji">${statusEmoji}</span>
-                <span class="tag-status" style="color: var(--${getColorVar(statusColor)}-color)">
-                    ${escapeHtml(statusText)}
-                </span>
+        <div class="smart-tag smart-tag-refined ${colorClass}">
+            <div class="tag-intro-band">
+                <span class="tag-emoji">${escapeHtml(statusEmoji)}</span>
+                <div class="tag-intro-copy">
+                    <span class="tag-overline">Selected work assessment</span>
+                    <span class="tag-status" style="color: var(--${getColorVar(statusColor)}-color)">${escapeHtml(statusText)}</span>
+                </div>
             </div>
 
             <div class="tag-title">${escapeHtml(tag.title || 'Unknown')}</div>
             ${tag.creator ? `<div class="tag-creator">By ${escapeHtml(tag.creator)}</div>` : ''}
             ${tag.publication_year ? `<div class="tag-year">Published: ${escapeHtml(String(tag.publication_year))}</div>` : ''}
 
-            <div class="tag-timeline">
-                <span>⏱</span>
+            <div class="tag-timeline tag-timeline-refined">
+                <span class="tag-timeline-label">Estimated timeline</span>
                 <span>${escapeHtml(expiryTimeline)}</span>
             </div>
 
-            <div class="tag-summary">
+            <div class="tag-summary tag-summary-refined">
                 <p>${escapeHtml(data.summary || '')}</p>
             </div>
 
-            <div class="tag-section">
-                <h4>⚖️ Risk Assessment</h4>
-                ${riskHtml}
-            </div>
+            <div class="tag-grid-refined">
+                <div class="tag-section">
+                    <h4>Risk Assessment</h4>
+                    ${riskHtml}
+                </div>
 
-            <div class="tag-uses">
-                <h4>📋 Allowed Uses</h4>
-                <div class="uses-list">
-                    ${allowedUsesSummary.map((use) => {
-                        const isAllowed = use.startsWith('✓') || use.startsWith('✅');
-                        return `<span class="use-item ${isAllowed ? 'allowed' : 'denied'}">${escapeHtml(use)}</span>`;
-                    }).join('')}
+                <div class="tag-section">
+                    <h4>Allowed Uses</h4>
+                    <div class="uses-list">
+                        ${allowedUsesSummary.map((use) => {
+                            const isAllowed = use.startsWith('✓') || use.startsWith('✅');
+                            return `<span class="use-item ${isAllowed ? 'allowed' : 'denied'}">${escapeHtml(use)}</span>`;
+                        }).join('')}
+                    </div>
                 </div>
             </div>
 
             <div class="tag-section">
-                <h4>💡 Recommendations</h4>
+                <h4>Recommendations</h4>
                 <div class="recommendations-list">${recommendationsHtml}</div>
             </div>
 
             <div class="tag-section">
-                <h4>✅ Legal Checklist</h4>
+                <h4>Legal Checklist</h4>
                 <div class="legal-checklist">${checklistHtml}</div>
             </div>
 
-            <div class="tag-confidence">
-                <span>🎯 Confidence: ${escapeHtml(confidenceLevel)} (${Math.round(confidenceScore * 100)}%)</span>
+            <div class="tag-confidence tag-confidence-refined">
+                <div class="tag-confidence-head">
+                    <span>Assessment confidence</span>
+                    <span>${escapeHtml(confidenceLevel)} (${Math.round(confidenceScore * 100)}%)</span>
+                </div>
                 <div class="confidence-bar">
                     <div class="confidence-fill" style="width: ${confidenceScore * 100}%; background: ${getConfidenceColor(confidenceScore)}"></div>
                 </div>
             </div>
 
             ${tag.ai_reasoning ? `
-            <div class="tag-reasoning">
-                <div class="tag-reasoning-title">
-                    <span>🤖</span>
-                    AI Analysis
-                </div>
+            <div class="tag-reasoning tag-reasoning-refined">
+                <div class="tag-reasoning-title">Reasoning Summary</div>
                 <p>${escapeHtml(tag.ai_reasoning)}</p>
             </div>` : ''}
 
-            <div class="tag-actions">${actionsHtml}</div>
+            <div class="tag-actions tag-actions-refined">${actionsHtml}</div>
 
-            <div class="tag-disclaimer">⚠️ ${escapeHtml(tagDisclaimer)}</div>
+            <div class="tag-disclaimer">${escapeHtml(tagDisclaimer)}</div>
 
             <div class="tag-meta">
                 <span>Generated: ${new Date(generatedAt).toLocaleDateString()}</span>
@@ -379,17 +408,6 @@ function displayDetailedSmartTag(data) {
 
     smartTagSection.classList.remove('hidden');
     smartTagSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function displaySmartTag(tag) {
-    displayDetailedSmartTag({
-        tag,
-        recommendations: [],
-        quick_actions: [],
-        risk_assessment: { level: 'Unknown', color: '#6c757d', icon: '❓', description: 'Risk not assessed' },
-        summary: '',
-        legal_checklist: []
-    });
 }
 
 function handleQuickAction(action, title) {
@@ -410,7 +428,7 @@ function handleQuickAction(action, title) {
             openFullReport();
             break;
         default:
-            alert(`Action "${action}" is not available yet.`);
+            showToast(`Action "${action}" is not available yet.`, 'info');
     }
 }
 
@@ -425,6 +443,7 @@ function verifySource(title) {
     [...new Set(links)].forEach((url, index) => {
         setTimeout(() => window.open(url, '_blank', 'noopener'), index * 120);
     });
+    showToast('Opened source verification links.', 'success');
 }
 
 function downloadTag(title) {
@@ -480,6 +499,7 @@ function downloadTag(title) {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(downloadUrl);
+    showToast('Downloaded a text version of the report.', 'success');
 }
 
 async function shareTag(title) {
@@ -490,16 +510,17 @@ async function shareTag(title) {
             text: `Check the copyright status of "${title}" on SCET`,
             url: reportUrl
         });
+        showToast('Share sheet opened.', 'success');
     } else {
         await navigator.clipboard.writeText(reportUrl);
-        alert('Report link copied to clipboard!');
+        showToast('Report link copied to clipboard.', 'success');
     }
 }
 
 async function copyCitation(title) {
     const citation = `Copyright analysis for "${title}" generated by SCET - Smart Copyright Expiry Tag System. ${new Date().toLocaleDateString()}`;
     await navigator.clipboard.writeText(citation);
-    alert('Citation copied to clipboard!');
+    showToast('Citation copied to clipboard.', 'success');
 }
 
 function openFullReport() {
@@ -516,7 +537,7 @@ function buildReportPayload() {
         title: selected.title || tag.title || '',
         creator: selected.creator || tag.creator || '',
         year: selected.publication_year || tag.publication_year || '',
-        type: selected.content_type || detail.report_data?.content_type || '',
+        type: selected.content_type || (detail.report_data && detail.report_data.content_type) || '',
         jurisdiction: tag.jurisdiction || ((jurisdiction && jurisdiction.value) || 'US'),
         source: selected.source || 'Multiple Sources',
         source_url: selected.source_url || '',
@@ -598,22 +619,88 @@ function loadJson(key, fallback) {
     }
 }
 
-function getConfidenceColor(score) {
-    if (score >= 0.8) return '#28a745';
-    if (score >= 0.6) return '#ffc107';
-    if (score >= 0.4) return '#fd7e14';
-    return '#dc3545';
+function toggleFiltersPanelVisibility() {
+    const expanded = searchFiltersPanel.classList.toggle('search-options-collapsed');
+    const isCollapsed = expanded;
+    toggleFiltersBtn.setAttribute('aria-expanded', String(!isCollapsed));
+    toggleFiltersBtn.textContent = isCollapsed ? 'Show Advanced Filters' : 'Hide Advanced Filters';
+}
+
+function markSelectedResult(resultId) {
+    document.querySelectorAll('.result-card').forEach((card) => {
+        const isActive = card.dataset.resultId === resultId;
+        card.classList.toggle('is-selected', isActive);
+        card.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function buildResultReason(result, matchPercent) {
+    const parts = [];
+    if (result.content_type) {
+        parts.push(`${prettyType(result.content_type)} match`);
+    }
+    if (result.source) {
+        parts.push(`sourced from ${result.source}`);
+    }
+    parts.push(`${matchPercent}% title alignment`);
+    return parts.join(' • ');
+}
+
+function renderSearchSkeletons() {
+    if (!resultsList || !searchResults) {
+        return;
+    }
+
+    resultsList.innerHTML = Array.from({ length: 3 }).map(() => `
+        <div class="result-card result-card-skeleton" aria-hidden="true">
+            <div class="skeleton-line skeleton-line-sm"></div>
+            <div class="skeleton-line skeleton-line-lg"></div>
+            <div class="skeleton-line skeleton-line-md"></div>
+            <div class="skeleton-pills">
+                <span class="skeleton-pill"></span>
+                <span class="skeleton-pill"></span>
+                <span class="skeleton-pill"></span>
+            </div>
+        </div>
+    `).join('');
+    searchResults.classList.remove('hidden');
+}
+
+function setResultsMeta(text) {
+    if (resultsMetaText) {
+        resultsMetaText.textContent = text;
+    }
+}
+
+function buildSearchContextText() {
+    const parts = [];
+    if (contentType && contentType.value) {
+        parts.push(`Type: ${prettyType(contentType.value)}`);
+    }
+    if (jurisdiction && jurisdiction.value) {
+        parts.push(`Jurisdiction: ${jurisdiction.value}`);
+    }
+    if (metadataSource && metadataSource.value) {
+        parts.push(`Source hint: ${metadataSource.value}`);
+    }
+    return parts.length ? `${parts.join(' | ')}.` : 'Searching across the available supported sources.';
 }
 
 function showLoading() {
     if (loadingIndicator) {
         loadingIndicator.classList.remove('hidden');
     }
+    if (searchBtn) {
+        searchBtn.disabled = true;
+    }
 }
 
 function hideLoading() {
     if (loadingIndicator) {
         loadingIndicator.classList.add('hidden');
+    }
+    if (searchBtn) {
+        searchBtn.disabled = false;
     }
 }
 
@@ -623,9 +710,34 @@ function hideElements(elements) {
 
 function displayError(message) {
     if (resultsList && searchResults) {
-        resultsList.innerHTML = `<p class="error-message" style="color: var(--danger-color); text-align: center; padding: 20px;">${escapeHtml(message)}</p>`;
+        resultsList.innerHTML = `<p class="error-message">${escapeHtml(message)}</p>`;
         searchResults.classList.remove('hidden');
     }
+    showToast(message, 'error');
+}
+
+function showToast(message, type) {
+    let region = document.getElementById('toastRegion');
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'toastRegion';
+        region.className = 'toast-region';
+        document.body.appendChild(region);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type || 'info'}`;
+    toast.textContent = message;
+    region.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('is-visible');
+    });
+
+    setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 220);
+    }, 2200);
 }
 
 function escapeHtml(text) {
@@ -645,6 +757,17 @@ function prettyType(value) {
     return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function cleanActionLabel(label) {
+    return String(label || '').replace(/[^\x20-\x7E]/g, '').trim() || 'Action';
+}
+
+function getConfidenceColor(score) {
+    if (score >= 0.8) return '#28a745';
+    if (score >= 0.6) return '#ffc107';
+    if (score >= 0.4) return '#fd7e14';
+    return '#dc3545';
+}
+
 function getColorVar(color) {
     const colorMap = {
         green: 'success',
@@ -656,9 +779,21 @@ function getColorVar(color) {
     return colorMap[color] || 'gray-500';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('SCET Frontend loaded - v4.0');
+async function checkApiHealth() {
+    try {
+        const response = await fetch(`${API_BASE}/health`);
+        const data = await response.json();
+        if (data.status !== 'healthy') {
+            console.warn('API degraded:', data);
+        }
+    } catch (error) {
+        console.warn('API not reachable. Make sure backend is running.');
+    }
+}
 
+const examples = ['Harry Potter', 'Sherlock Holmes', 'The Great Gatsby'];
+
+document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) {
         searchInput.focus();
     }
@@ -681,34 +816,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setTimeout(() => {
                 performSearch();
-            }, 300);
+            }, 220);
+        }
+    }
+
+    if (isSearchPage) {
+        const searchBox = document.querySelector('.search-box');
+        if (searchBox) {
+            const searchHint = document.createElement('div');
+            searchHint.className = 'search-hint search-hint-refined';
+            searchHint.innerHTML = `Try: ${examples.map((example) => `<a href="#" onclick="document.getElementById('searchInput').value='${example}';performSearch();return false;">${example}</a>`).join(' • ')}`;
+            searchBox.appendChild(searchHint);
         }
     }
 });
-
-async function checkApiHealth() {
-    try {
-        const response = await fetch(`${API_BASE}/health`);
-        const data = await response.json();
-        if (data.status === 'healthy') {
-            console.log('API connected:', data);
-        } else {
-            console.warn('API degraded:', data);
-        }
-    } catch (error) {
-        console.warn('API not reachable. Make sure backend is running.');
-    }
-}
-
-const examples = ['Harry Potter', 'Sherlock Holmes', 'The Great Gatsby'];
-
-if (isSearchPage) {
-    const searchBox = document.querySelector('.search-box');
-    if (searchBox) {
-        const searchHint = document.createElement('div');
-        searchHint.className = 'search-hint';
-        searchHint.style.cssText = 'font-size: 13px; color: var(--gray-500); margin-top: 8px;';
-        searchHint.innerHTML = `Try: ${examples.map((example) => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${example}';performSearch();return false;">${example}</a>`).join(' • ')}`;
-        searchBox.appendChild(searchHint);
-    }
-}
