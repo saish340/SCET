@@ -9,7 +9,6 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Navbar -->
         <header class="header">
             <div class="header-container">
                 <div class="logo">
@@ -29,9 +28,7 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Page Header -->
             <section class="page-header">
                 <div class="container">
                     <h1 class="page-title" id="reportTitle">Copyright Validation Report</h1>
@@ -39,10 +36,8 @@
                 </div>
             </section>
 
-            <!-- Report Content -->
             <section class="about-section">
                 <div class="container">
-                    <!-- Report Card -->
                     <div class="content-section">
                         <div class="report-card">
                             <div class="report-header">
@@ -51,25 +46,25 @@
                                     <p class="report-creator" id="workCreator">Creator Name</p>
                                 </div>
                                 <div class="report-status-badge" id="statusBadge">
-                                    <span class="badge badge-unknown">UNKNOWN</span>
+                                    <span class="result-badge badge-unknown">UNKNOWN</span>
                                 </div>
                             </div>
 
                             <div class="report-metadata">
                                 <div class="report-meta-item">
-                                    <span class="meta-label">📅 Publication Year:</span>
+                                    <span class="meta-label">Publication Year</span>
                                     <span class="meta-value" id="pubYear">Unknown</span>
                                 </div>
                                 <div class="report-meta-item">
-                                    <span class="meta-label">📑 Content Type:</span>
-                                    <span class="meta-value" id="contentType">Unknown</span>
+                                    <span class="meta-label">Content Type</span>
+                                    <span class="meta-value" id="reportContentType">Unknown</span>
                                 </div>
                                 <div class="report-meta-item">
-                                    <span class="meta-label">🌍 Jurisdiction:</span>
-                                    <span class="meta-value" id="jurisdiction">United States</span>
+                                    <span class="meta-label">Jurisdiction</span>
+                                    <span class="meta-value" id="reportJurisdiction">United States</span>
                                 </div>
                                 <div class="report-meta-item">
-                                    <span class="meta-label">📚 Data Source:</span>
+                                    <span class="meta-label">Data Source</span>
                                     <span class="meta-value" id="dataSource">Multiple Sources</span>
                                 </div>
                             </div>
@@ -87,11 +82,11 @@
                                 <h3 class="report-section-title">Expiry Information</h3>
                                 <div class="expiry-info">
                                     <div class="expiry-item">
-                                        <span class="expiry-label">🗓️ Copyright Expiry Date:</span>
+                                        <span class="expiry-label">Copyright Expiry Date</span>
                                         <span class="expiry-value" id="expiryDate">Not determined</span>
                                     </div>
                                     <div class="expiry-item">
-                                        <span class="expiry-label">⏳ Years Remaining:</span>
+                                        <span class="expiry-label">Years Remaining</span>
                                         <span class="expiry-value" id="yearsRemaining">N/A</span>
                                     </div>
                                 </div>
@@ -118,38 +113,30 @@
                                     <p>The system applies copyright rules based on:</p>
                                     <ul>
                                         <li>Publication year and jurisdiction-specific public domain cutoff dates</li>
-                                        <li>Creator death date (if known) plus statutory term (typically 70 years)</li>
+                                        <li>Creator information and statutory term assumptions</li>
                                         <li>Work type and applicable copyright duration rules</li>
-                                        <li>Registration status and renewal records (for older works)</li>
+                                        <li>Available registry or metadata source signals</li>
                                     </ul>
                                 </div>
                             </div>
 
                             <div class="report-section">
+                                <h3 class="report-section-title">Allowed Uses</h3>
+                                <div class="sources-list" id="allowedUsesList"></div>
+                            </div>
+
+                            <div class="report-section">
                                 <h3 class="report-section-title">Data Sources Consulted</h3>
-                                <div class="sources-list" id="sourcesList">
-                                    <div class="source-item">
-                                        <span class="source-icon">📚</span>
-                                        <span class="source-name">Open Library</span>
-                                    </div>
-                                    <div class="source-item">
-                                        <span class="source-icon">📖</span>
-                                        <span class="source-name">Wikipedia</span>
-                                    </div>
-                                    <div class="source-item">
-                                        <span class="source-icon">🏛️</span>
-                                        <span class="source-name">US Copyright Office</span>
-                                    </div>
-                                </div>
+                                <div class="sources-list" id="sourcesList"></div>
                             </div>
 
                             <div class="report-section">
                                 <div class="novelty-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%); border-color: #ef4444;">
-                                    <h4 class="novelty-title" style="color: #fca5a5;">⚠️ Legal Disclaimer</h4>
+                                    <h4 class="novelty-title" style="color: #fca5a5;">Legal Disclaimer</h4>
                                     <p class="novelty-text" style="font-style: normal;">
-                                        This report is for informational purposes only and does not constitute legal advice. 
-                                        Copyright status should be verified through official channels and reviewed by qualified 
-                                        legal professionals before making any decisions. See our full 
+                                        This report is for informational purposes only and does not constitute legal advice.
+                                        Copyright status should be verified through official channels and reviewed by qualified
+                                        legal professionals before making any decisions. See our full
                                         <a href="disclaimer.html" style="color: #f87171;">disclaimer</a>.
                                     </p>
                                 </div>
@@ -157,20 +144,21 @@
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
                     <div class="content-section" style="text-align: center;">
                         <a href="search.html" class="btn-primary" style="display: inline-block; padding: 12px 24px; background: var(--primary-color); color: white; text-decoration: none; border-radius: var(--radius-md); font-weight: 600;">
                             ← Back to Search
                         </a>
+                        <button id="shareReportBtn" class="btn-secondary" style="margin-left: var(--space-2); padding: 12px 24px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
+                            Copy Report Link
+                        </button>
                         <button onclick="window.print()" class="btn-secondary" style="margin-left: var(--space-2); padding: 12px 24px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
-                            🖨️ Print Report
+                            Print Report
                         </button>
                     </div>
                 </div>
             </section>
         </main>
 
-        <!-- Footer -->
         <footer class="footer">
             <div class="footer-container">
                 <div class="footer-content">
@@ -181,7 +169,7 @@
                     <div class="footer-section">
                         <h4 class="footer-heading">Quick Links</h4>
                         <p class="footer-text">
-                            <a href="search.html" style="color: var(--text-secondary); text-decoration: none;">Search</a> • 
+                            <a href="search.html" style="color: var(--text-secondary); text-decoration: none;">Search</a> •
                             <a href="disclaimer.html" style="color: var(--text-secondary); text-decoration: none;">Disclaimer</a>
                         </p>
                     </div>
@@ -193,16 +181,6 @@
         </footer>
     </div>
 
-    <script>
-        // Report page JavaScript - populate from URL parameters or localStorage
-        document.addEventListener('DOMContentLoaded', function() {
-            // This is a template - in production, data would come from URL params or API
-            // Example: const params = new URLSearchParams(window.location.search);
-            // const workId = params.get('id');
-            // Then fetch detailed report from API
-            
-            console.log('Report page loaded - ready for data population');
-        });
-    </script>
+    <script src="js/report.js"></script>
 </body>
 </html>

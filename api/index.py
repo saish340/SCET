@@ -10,6 +10,7 @@ import urllib.parse
 import re
 import os
 import base64
+import difflib
 from difflib import SequenceMatcher
 from datetime import datetime
 
@@ -18,6 +19,50 @@ QUERY_NOISE_WORDS = {
     'song', 'songs', 'music', 'track', 'audio', 'video', 'lyrics',
     'official', 'full', 'new', 'old', 'hindi', 'marathi', 'tamil',
     'telugu', 'movie', 'film'
+}
+
+SUPPORTED_CONTENT_TYPES = {
+    'book', 'music', 'film', 'article', 'artwork', 'software', 'code',
+    'project', 'innovation', 'drone', 'technology', 'research_project',
+    'startup', 'company', 'patent', 'trademark', 'academic_paper',
+    'copyright_registration', 'copyright_search'
+}
+
+CONTENT_TYPE_ALIASES = {
+    'book': {'book', 'books', 'novel', 'publication', 'library'},
+    'music': {'music', 'song', 'songs', 'track', 'album', 'recording'},
+    'film': {'film', 'movie', 'cinema', 'television', 'tv'},
+    'article': {'article', 'essay', 'news', 'entry'},
+    'artwork': {'art', 'artwork', 'painting', 'sculpture', 'illustration'},
+    'software': {'software', 'app', 'application', 'program'},
+    'code': {'code', 'library', 'repository', 'package', 'sdk'},
+    'project': {'project', 'initiative'},
+    'innovation': {'innovation', 'invention'},
+    'drone': {'drone', 'robotics', 'robot'},
+    'technology': {'technology', 'tech', 'device'},
+    'research_project': {'research', 'research_project', 'study'},
+    'startup': {'startup', 'venture'},
+    'company': {'company', 'business', 'brand'},
+    'patent': {'patent'},
+    'trademark': {'trademark', 'brandmark'},
+    'academic_paper': {'academic_paper', 'paper', 'journal'}
+}
+
+SUGGESTION_SEEDS = [
+    'Harry Potter', 'Romeo and Juliet', 'The Great Gatsby', 'Sherlock Holmes',
+    'Mona Lisa', 'Star Wars', 'The Beatles', 'Pride and Prejudice',
+    'Alice in Wonderland', 'Avatar', 'Shape of You', 'Believer',
+    'Chammak Challo', 'Titanic', 'To Kill a Mockingbird'
+]
+
+SOURCE_HINTS = {
+    'youtube': "YouTube is treated as a discovery hint. SCET ranks matching metadata from supported registries and reference sources.",
+    'spotify': "Spotify is used as a music-intent hint. Results are ranked toward music metadata, but the search still uses supported sources.",
+    'apple music': "Apple Music is used as a music-intent hint. Results come from supported metadata sources.",
+    'netflix': "Netflix is used as a film-intent hint. Results are ranked toward film-related matches from supported sources.",
+    'publisher': "Publisher mode prioritizes bibliographic and reference metadata, then falls back to general sources.",
+    'official registry': "Registry mode prioritizes government and official registry sources where available.",
+    'other': "SCET is showing the closest supported metadata sources for this query."
 }
 
 
@@ -40,6 +85,166 @@ def classify_media_intent(raw_query):
         'song': bool(words & song_terms),
         'film': bool(words & film_terms)
     }
+
+
+def normalize_content_type(value):
+    normalized = (value or '').strip().lower().replace(' ', '_')
+    return normalized if normalized in SUPPORTED_CONTENT_TYPES else ''
+
+
+def infer_wikipedia_content_type(title, snippet):
+    combined = f"{title or ''} {snippet or ''}".lower()
+    if any(marker in combined for marker in [' song', ' single', ' album', ' soundtrack', ' singer']):
+        return 'music'
+    if any(marker in combined for marker in [' film', ' movie', ' television', ' tv series', '(film)']):
+        return 'film'
+    if any(marker in combined for marker in [' painting', ' artwork', ' sculpt', ' museum', ' portrait']):
+        return 'artwork'
+    if any(marker in combined for marker in [' software', ' programming', ' library', ' framework', ' code']):
+        return 'software'
+    if any(marker in combined for marker in [' company', ' startup', ' corporation']):
+        return 'company'
+    if any(marker in combined for marker in [' journal', ' paper', ' research']):
+        return 'academic_paper'
+    if any(marker in combined for marker in [' novel', ' book', ' writer', ' author']):
+        return 'book'
+    return 'article'
+
+
+def build_type_tokens(content_type):
+    normalized = normalize_content_type(content_type)
+    if not normalized:
+        return set()
+    return CONTENT_TYPE_ALIASES.get(normalized, {normalized})
+
+
+def result_matches_content_type(result, requested_type):
+    normalized = normalize_content_type(requested_type)
+    if not normalized:
+        return True
+
+    result_type = normalize_content_type(result.get('content_type'))
+    if result_type == normalized:
+        return True
+
+    result_tokens = build_type_tokens(result_type)
+    requested_tokens = build_type_tokens(normalized)
+
+    if result_tokens & requested_tokens:
+        return True
+
+    if result_type in {'copyright_registration', 'copyright_search'} and normalized in {
+        'music', 'film', 'book', 'artwork', 'software', 'code', 'project',
+        'technology', 'company', 'startup', 'patent', 'trademark', 'academic_paper'
+    }:
+        return True
+
+    return False
+
+
+def rank_result_for_request(result, requested_type, requested_source):
+    score = float(result.get('similarity_score', 0) or 0)
+    result_type = normalize_content_type(result.get('content_type'))
+    requested_type = normalize_content_type(requested_type)
+    source = (result.get('source') or '').lower()
+    source_hint = (requested_source or '').lower()
+
+    if requested_type and result_type == requested_type:
+        score += 0.25
+    elif requested_type and result_matches_content_type(result, requested_type):
+        score += 0.1
+    elif requested_type:
+        score -= 0.2
+
+    if 'spotify' in source_hint or 'apple music' in source_hint or 'youtube' in source_hint:
+        if result_type == 'music':
+            score += 0.15
+    if 'netflix' in source_hint:
+        if result_type == 'film':
+            score += 0.15
+    if 'official registry' in source_hint or 'copyright' in source_hint:
+        if 'copyright office' in source or 'intellectual property' in source:
+            score += 0.2
+    if 'publisher' in source_hint and source in {'open library', 'wikipedia'}:
+        score += 0.08
+
+    return round(score, 4)
+
+
+def dedupe_results(results):
+    deduped = []
+    seen = {}
+
+    for result in results:
+        key = (
+            (result.get('title') or '').strip().lower(),
+            (result.get('creator') or '').strip().lower(),
+            (result.get('source') or '').strip().lower()
+        )
+        previous_index = seen.get(key)
+        if previous_index is None:
+            seen[key] = len(deduped)
+            deduped.append(result)
+            continue
+
+        if result.get('similarity_score', 0) > deduped[previous_index].get('similarity_score', 0):
+            deduped[previous_index] = result
+
+    return deduped
+
+
+def generate_search_suggestions(query, results):
+    candidates = list(SUGGESTION_SEEDS)
+    for result in results[:10]:
+        title = (result.get('title') or '').strip()
+        if title:
+            candidates.append(title)
+
+    unique_candidates = []
+    seen = set()
+    for candidate in candidates:
+        key = candidate.lower()
+        if key not in seen:
+            seen.add(key)
+            unique_candidates.append(candidate)
+
+    ranked = []
+    for candidate in unique_candidates:
+        similarity = calculate_text_similarity(query, candidate)
+        ranked.append((similarity, candidate))
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    suggestions = [candidate for similarity, candidate in ranked if similarity >= 0.25 and candidate.lower() != query.lower()]
+    return suggestions[:5]
+
+
+def detect_query_correction(query, results):
+    simplified = simplify_query(query)
+    candidate_titles = [result.get('title', '') for result in results[:5] if result.get('title')]
+    candidate_pool = candidate_titles + SUGGESTION_SEEDS
+    matches = difflib.get_close_matches(query, candidate_pool, n=1, cutoff=0.84)
+    if matches and matches[0].lower() != query.lower():
+        return matches[0]
+    if simplified and simplified.lower() != query.lower():
+        return simplified
+    return None
+
+
+def build_source_explanation(source, requested_type, jurisdiction):
+    source_key = (source or '').strip().lower()
+    requested_type = normalize_content_type(requested_type)
+    explanation = SOURCE_HINTS.get(source_key)
+
+    if explanation and requested_type:
+        explanation += f" Active type filter: {requested_type.replace('_', ' ')}."
+    elif requested_type:
+        explanation = f"Results are filtered toward {requested_type.replace('_', ' ')} matches."
+
+    if jurisdiction:
+        jurisdiction_note = f" Jurisdiction focus: {jurisdiction}."
+        explanation = (explanation or "SCET is combining supported metadata sources.") + jurisdiction_note
+
+    return explanation or ""
 
 
 def rewrite_wikipedia_query(raw_query):
@@ -224,11 +429,12 @@ def search_wikipedia(query):
 
                 # Lower threshold allows useful partial/fuzzy title matches
                 if similarity >= 0.2:
+                    content_type = infer_wikipedia_content_type(title, snippet)
                     results.append({
                         "id": f"wiki_{i}",
                         "title": title,
                         "publication_year": year,
-                        "content_type": "article",
+                        "content_type": content_type,
                         "source": "Wikipedia",
                         "source_url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
                         "description": snippet[:200],
@@ -739,6 +945,7 @@ def generate_smart_tag(title, year, jurisdiction="US", creator=""):
             "emoji": "🌍",
             "title": title,
             "creator": creator,
+            "publication_year": pub_year,
             "expiry_tag": f"Expired (published {pub_year})",
             "expiry_info": f"Published in {pub_year}, now in public domain",
             "expiry_timeline": f"Published in {pub_year}, now in public domain",
@@ -765,6 +972,7 @@ def generate_smart_tag(title, year, jurisdiction="US", creator=""):
             "emoji": "🌍",
             "title": title,
             "creator": creator,
+            "publication_year": pub_year,
             "expiry_tag": f"Expired (published {pub_year})",
             "expiry_info": f"Copyright expired (published {pub_year})",
             "expiry_timeline": f"Copyright expired (published {pub_year})",
@@ -793,6 +1001,7 @@ def generate_smart_tag(title, year, jurisdiction="US", creator=""):
             "emoji": "🔒",
             "title": title,
             "creator": creator,
+            "publication_year": pub_year,
             "expiry_tag": f"Estimated expiry {expiry_year}",
             "expiry_info": f"Protected until ~{expiry_year} ({years_remaining} years remaining)",
             "expiry_timeline": f"Protected until ~{expiry_year} ({years_remaining} years remaining)",
@@ -828,6 +1037,7 @@ class handler(BaseHTTPRequestHandler):
             q = params.get('q', '')
             jurisdiction = params.get('jurisdiction', 'US')
             source = params.get('source', '')  # Optional source filter
+            requested_type = params.get('type', '')
             
             # Search sources based on filter
             results = []
@@ -875,16 +1085,39 @@ class handler(BaseHTTPRequestHandler):
                         results.extend(search_indian_copyright(q))
                     if jurisdiction == 'EU':
                         results.extend(search_eu_trademark(q))
-            
-            results.sort(key=lambda x: x.get('similarity_score', 0), reverse=True)
+
+            results = dedupe_results(results)
+            filtered_results = [result for result in results if result_matches_content_type(result, requested_type)]
+            results_to_use = filtered_results if filtered_results else results
+
+            for result in results_to_use:
+                result["ranking_score"] = rank_result_for_request(result, requested_type, source)
+
+            results_to_use.sort(key=lambda x: x.get('ranking_score', x.get('similarity_score', 0)), reverse=True)
+            suggestions = generate_search_suggestions(q, results_to_use)
+            correction = detect_query_correction(q, results_to_use)
+            explanation = build_source_explanation(source, requested_type, jurisdiction)
+
             response = {
                 "query": q,
-                "results": results[:15],
-                "total_results": len(results),
+                "results": results_to_use[:15],
+                "total_results": len(results_to_use),
                 "source_filter": source if source else "all",
-                "sources_searched": ["Open Library", "Wikipedia", "US Copyright Office", 
-                                    "Indian Copyright Office" if jurisdiction == "IN" else None,
-                                    "EU IPO" if jurisdiction == "EU" else None]
+                "requested_type": requested_type or "all",
+                "suggestions": suggestions,
+                "correction": correction,
+                "ai_explanation": explanation,
+                "filter_applied": bool(normalize_content_type(requested_type)),
+                "fallback_to_broad_results": bool(normalize_content_type(requested_type) and not filtered_results),
+                "sources_searched": [
+                    source_name for source_name in [
+                        "Open Library",
+                        "Wikipedia",
+                        "US Copyright Office",
+                        "Indian Copyright Office" if jurisdiction == "IN" else None,
+                        "EU IPO" if jurisdiction == "EU" else None
+                    ] if source_name
+                ]
             }
         
         elif path == '/api/v1/tag':
@@ -907,6 +1140,15 @@ class handler(BaseHTTPRequestHandler):
             # Add detailed information
             response = {
                 "tag": tag,
+                "report_data": {
+                    "title": title,
+                    "creator": creator,
+                    "publication_year": year,
+                    "content_type": content_type,
+                    "jurisdiction": jurisdiction,
+                    "generated_at": tag.get("generated_at"),
+                    "summary": tag.get("expiry_info")
+                },
                 "recommendations": [
                     {"icon": "📚", "title": "Verify Source", "type": "info", "description": f"Verify publication date of '{title}' from official sources"},
                     {"icon": "⚖️", "title": "Check Laws", "type": "warning", "description": f"Check {jurisdiction} copyright law for specific exemptions"},
@@ -915,7 +1157,8 @@ class handler(BaseHTTPRequestHandler):
                 "quick_actions": [
                     {"id": "verify", "label": "🔍 Verify Source", "action": "verify"},
                     {"id": "share", "label": "📤 Share", "action": "share"},
-                    {"id": "download", "label": "📥 Download Report", "action": "download"}
+                    {"id": "download", "label": "📥 Download Report", "action": "download"},
+                    {"id": "report", "label": "📄 Full Report", "action": "full_report"}
                 ],
                 "risk_assessment": {
                     "level": "Low" if is_public_domain else "Medium",
@@ -940,6 +1183,42 @@ class handler(BaseHTTPRequestHandler):
                 ]
             }
 
+        elif path == '/api/v1/report':
+            title = params.get('title', 'Unknown')
+            creator = params.get('creator', '')
+            year_str = params.get('year', '')
+            year = int(year_str) if year_str and year_str.isdigit() else None
+            content_type = params.get('type', 'unknown')
+            jurisdiction = params.get('jurisdiction', 'US')
+            source_name = params.get('source', 'Multiple Sources')
+            source_url = params.get('source_url', '')
+
+            tag = generate_smart_tag(title, year, jurisdiction, creator)
+            response = {
+                "title": title,
+                "creator": creator,
+                "publication_year": year,
+                "content_type": content_type,
+                "jurisdiction": jurisdiction,
+                "source": source_name,
+                "source_url": source_url,
+                "tag": tag,
+                "status_text": tag.get("status_text"),
+                "status": tag.get("status"),
+                "summary": f"{tag['emoji']} {title} - {tag['status'].replace('_', ' ').title()}. {tag['expiry_info']}",
+                "expiry_date": tag.get("expiry_tag"),
+                "years_remaining": "0" if tag.get("status") == "PUBLIC_DOMAIN" else tag.get("expiry_info", "N/A"),
+                "confidence_score": tag.get("confidence_score", tag.get("confidence", 0)),
+                "reasoning": tag.get("ai_reasoning"),
+                "allowed_uses": tag.get("allowed_uses", []),
+                "sources_consulted": [
+                    {"name": source_name, "url": source_url, "used": bool(source_name)},
+                    {"name": "US Copyright Office", "url": "https://www.copyright.gov/public-records/", "used": jurisdiction == "US"},
+                    {"name": "Wikipedia", "url": f"https://en.wikipedia.org/wiki/Special:Search?search={urllib.parse.quote(title)}", "used": True}
+                ],
+                "generated_at": tag.get("generated_at")
+            }
+
         elif path == '/api/youtube-check':
             title = params.get('title', '').strip()
             artist = params.get('artist', '').strip()
@@ -956,7 +1235,7 @@ class handler(BaseHTTPRequestHandler):
             response = {
                 "name": "SCET - Copyright Status Tag",
                 "version": "1.0.0",
-                "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/tag/detailed", "/api/v1/health", "/api/youtube-check"]
+                "endpoints": ["/api/v1/search", "/api/v1/tag", "/api/v1/tag/detailed", "/api/v1/report", "/api/v1/health", "/api/youtube-check"]
             }
         
         self.wfile.write(json.dumps(response).encode())

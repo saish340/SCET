@@ -1,16 +1,18 @@
 /**
  * SCET Frontend Application
  * Copyright Status Tag - JavaScript
- * Version 3.0 - Cache Bust Version
+ * Version 4.0 - Search, report, and history enhancements
  */
 
-// Configuration
-// For local development use localhost, for production use relative path
-const API_BASE = window.location.hostname === 'localhost' 
+const API_BASE = window.location.hostname === 'localhost'
     ? 'http://localhost:8000/api/v1'
-    : '/api/v1';  // Same domain on Vercel
+    : '/api/v1';
 
-// DOM Elements
+const STORAGE_KEYS = {
+    lastReport: 'scet:last-report',
+    recentReports: 'scet:recent-reports'
+};
+
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const contentType = document.getElementById('contentType');
@@ -27,71 +29,73 @@ const suggestions = document.getElementById('suggestions');
 const suggestionsList = document.getElementById('suggestionsList');
 const smartTagSection = document.getElementById('smartTagSection');
 const smartTagContainer = document.getElementById('smartTagContainer');
+const recentReports = document.getElementById('recentReports');
 
-// State
 let currentSearchId = null;
 let selectedWorkId = null;
 let selectedResultData = null;
 let latestDetailedTagData = null;
 
-// Detect current page
 const isHomePage = window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
 const isSearchPage = window.location.pathname.endsWith('search.html');
+const REPORT_PAGE_PATH = window.location.hostname === 'localhost' ? 'report.html' : '/report';
 
-// Event Listeners
-searchBtn.addEventListener('click', performSearch);
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') performSearch();
-});
+if (searchBtn) {
+    searchBtn.addEventListener('click', performSearch);
+}
 
-correctedQuery.addEventListener('click', (e) => {
-    e.preventDefault();
-    searchInput.value = correctedQuery.textContent;
-    performSearch();
-});
+if (searchInput) {
+    searchInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            performSearch();
+        }
+    });
+}
 
-// Main Search Function
+if (correctedQuery) {
+    correctedQuery.addEventListener('click', (event) => {
+        event.preventDefault();
+        searchInput.value = correctedQuery.textContent;
+        performSearch();
+    });
+}
+
 async function performSearch() {
-    const query = searchInput.value.trim();
-    if (!query) return;
-    
-    // If on home page, redirect to search page with query params
+    const query = (searchInput && searchInput.value.trim()) || '';
+    if (!query) {
+        return;
+    }
+
     if (isHomePage) {
         const params = new URLSearchParams({
-            query: query,
-            type: contentType.value || '',
-            country: jurisdiction.value || '',
-            source: metadataSource.value || ''
+            query,
+            type: (contentType && contentType.value) || '',
+            country: (jurisdiction && jurisdiction.value) || '',
+            source: (metadataSource && metadataSource.value) || ''
         });
         window.location.href = `search.html?${params.toString()}`;
         return;
     }
-    
-    // Execute search (for search page)
+
     showLoading();
-    hideElements([searchResults, smartTagSection, suggestions]);
-    
+    hideElements([searchResults, smartTagSection, suggestions, correctionNotice, aiExplanation]);
+
     try {
-        // Build query parameters
         const params = new URLSearchParams({
             q: query,
-            jurisdiction: jurisdiction.value || 'US',
-            type: contentType.value || '',
-            source: metadataSource.value || ''
+            jurisdiction: (jurisdiction && jurisdiction.value) || 'US',
+            type: (contentType && contentType.value) || '',
+            source: (metadataSource && metadataSource.value) || ''
         });
-        
-        // Fetch search results
-        const response = await fetch(`${API_BASE}/search?${params}`);
-        
+
+        const response = await fetch(`${API_BASE}/search?${params.toString()}`);
         if (!response.ok) {
             throw new Error('Search failed');
         }
-        
+
         const data = await response.json();
-        currentSearchId = Math.random().toString(36).substr(2, 9);
-        
+        currentSearchId = Math.random().toString(36).slice(2, 11);
         displaySearchResults(data);
-        
     } catch (error) {
         console.error('Search error:', error);
         displayError('Search failed. Please check your connection and try again.');
@@ -100,52 +104,94 @@ async function performSearch() {
     }
 }
 
-// Display Search Results
 function displaySearchResults(data) {
+    renderCorrection(data.correction);
+    renderAiExplanation(data);
+
     if (data.results && data.results.length > 0) {
         resultsList.innerHTML = '';
-        
-        data.results.forEach(result => {
-            const resultEl = createResultElement(result);
-            resultsList.appendChild(resultEl);
+        data.results.forEach((result) => {
+            resultsList.appendChild(createResultElement(result));
         });
-        
         searchResults.classList.remove('hidden');
     } else {
-        resultsList.innerHTML = '<p class="no-results">No results found. Try a different search term.</p>';
+        const fallbackNote = data.filter_applied && data.fallback_to_broad_results
+            ? 'No exact matches for this content type, so SCET is showing the closest broader matches.'
+            : 'No results found. Try a different search term.';
+        resultsList.innerHTML = `<p class="no-results">${escapeHtml(fallbackNote)}</p>`;
         searchResults.classList.remove('hidden');
     }
-    
-    // Show suggestions
-    if (data.suggestions && data.suggestions.length > 0) {
-        suggestionsList.innerHTML = '';
-        
-        data.suggestions.forEach(suggestion => {
-            const tag = document.createElement('span');
-            tag.className = 'suggestion-tag';
-            tag.textContent = suggestion;
-            tag.addEventListener('click', () => {
-                searchInput.value = suggestion;
-                performSearch();
-            });
-            suggestionsList.appendChild(tag);
-        });
-        
-        suggestions.classList.remove('hidden');
+
+    renderSuggestions(data.suggestions || []);
+}
+
+function renderCorrection(correction) {
+    if (!correction || !correctionNotice || !correctedQuery) {
+        return;
+    }
+    correctedQuery.textContent = correction;
+    correctionNotice.classList.remove('hidden');
+}
+
+function renderAiExplanation(data) {
+    if (!aiExplanation || !aiExplanationText) {
+        return;
+    }
+
+    const parts = [];
+    if (data.ai_explanation) {
+        parts.push(data.ai_explanation);
+    }
+    if (data.filter_applied && data.fallback_to_broad_results) {
+        parts.push('No exact type-specific matches were found, so broader close matches are shown below.');
+    }
+    if (data.total_results) {
+        parts.push(`Showing ${data.total_results} result${data.total_results === 1 ? '' : 's'}.`);
+    }
+
+    if (parts.length) {
+        aiExplanationText.textContent = parts.join(' ');
+        aiExplanation.classList.remove('hidden');
     }
 }
 
-// Create Result Element
+function renderSuggestions(items) {
+    if (!suggestions || !suggestionsList) {
+        return;
+    }
+
+    suggestionsList.innerHTML = '';
+    if (!items.length) {
+        suggestions.classList.add('hidden');
+        return;
+    }
+
+    items.forEach((suggestion) => {
+        const tag = document.createElement('span');
+        tag.className = 'suggestion-tag';
+        tag.textContent = suggestion;
+        tag.addEventListener('click', () => {
+            searchInput.value = suggestion;
+            performSearch();
+        });
+        suggestionsList.appendChild(tag);
+    });
+
+    suggestions.classList.remove('hidden');
+}
+
 function createResultElement(result) {
     const div = document.createElement('div');
     div.className = 'result-card';
     div.onclick = () => selectResult(result);
-    
-    const statusClass = result.copyright_status.toLowerCase().replace(' ', '_');
-    const statusBadgeClass = result.copyright_status === 'PROTECTED' ? 'badge-protected' : 
-                             result.copyright_status === 'PUBLIC_DOMAIN' ? 'badge-public' : 
-                             'badge-unknown';
-    
+
+    const status = String(result.copyright_status || 'UNKNOWN').toUpperCase();
+    const statusBadgeClass = status === 'PROTECTED'
+        ? 'badge-protected'
+        : status === 'PUBLIC_DOMAIN'
+            ? 'badge-public'
+            : 'badge-unknown';
+
     div.innerHTML = `
         <div class="result-header">
             <div>
@@ -154,44 +200,42 @@ function createResultElement(result) {
             </div>
         </div>
         <div class="result-meta">
-            ${result.publication_year ? `<span class="result-year">📅 ${result.publication_year}</span>` : ''}
-            ${result.content_type ? `<span class="result-type">📑 ${capitalizeFirst(result.content_type)}</span>` : ''}
+            ${result.publication_year ? `<span class="result-year">📅 ${escapeHtml(String(result.publication_year))}</span>` : ''}
+            ${result.content_type ? `<span class="result-type">📑 ${escapeHtml(prettyType(result.content_type))}</span>` : ''}
             ${result.source ? `<span class="result-source">📚 ${escapeHtml(result.source)}</span>` : ''}
-            <span class="result-badge ${statusBadgeClass}">${formatStatus(result.copyright_status)}</span>
-            <span class="similarity-score">🎯 ${Math.round(result.similarity_score * 100)}% match</span>
+            <span class="result-badge ${statusBadgeClass}">${escapeHtml(formatStatus(status))}</span>
+            <span class="similarity-score">🎯 ${Math.round((result.similarity_score || 0) * 100)}% match</span>
         </div>
     `;
-    
+
     return div;
 }
 
-// Select a Result and Generate Smart Tag
 async function selectResult(result) {
     selectedWorkId = result.id;
     selectedResultData = result;
-    
+
     showLoading();
-    
+
     try {
-        // Use the detailed endpoint for richer output
         const params = new URLSearchParams({
             title: result.title,
             creator: result.creator || '',
             year: result.publication_year || '',
             type: result.content_type || '',
-            jurisdiction: jurisdiction.value || 'US'
+            jurisdiction: (jurisdiction && jurisdiction.value) || 'US'
         });
-        
-        const response = await fetch(`${API_BASE}/tag/detailed?${params}`);
-        
+
+        const response = await fetch(`${API_BASE}/tag/detailed?${params.toString()}`);
         if (!response.ok) {
             throw new Error('Failed to generate tag');
         }
-        
+
         const detailedTag = await response.json();
         latestDetailedTagData = detailedTag;
+        persistRecentReport(buildReportPayload());
+        renderRecentReports();
         displayDetailedSmartTag(detailedTag);
-        
     } catch (error) {
         console.error('Tag generation error:', error);
         displayError('Failed to generate Smart Tag. Please try again.');
@@ -200,132 +244,113 @@ async function selectResult(result) {
     }
 }
 
-// Display Enhanced Smart Tag with Recommendations
 function displayDetailedSmartTag(data) {
-    const tag = data.tag;
-    
-    // Add fallbacks for missing fields from API
+    const tag = data.tag || {};
     const statusColor = tag.status_color || (tag.status === 'PUBLIC_DOMAIN' ? 'green' : 'red');
     const statusEmoji = tag.status_emoji || tag.emoji || '📋';
     const statusText = tag.status_text || (tag.status === 'PUBLIC_DOMAIN' ? 'Public Domain' : 'Copyright Protected');
     const expiryTimeline = tag.expiry_timeline || tag.expiry_info || 'Unknown';
     const allowedUsesSummary = tag.allowed_uses_summary || tag.allowed_uses || [];
-    const confidenceLevel = tag.confidence_level || (tag.confidence >= 0.8 ? 'High' : 'Medium');
-    const confidenceScore = tag.confidence_score || tag.confidence || 0.8;
+    const confidenceScore = Number(tag.confidence_score || tag.confidence || 0.8);
+    const confidenceLevel = tag.confidence_level || (confidenceScore >= 0.8 ? 'High' : confidenceScore >= 0.6 ? 'Medium' : 'Low');
     const tagDisclaimer = tag.disclaimer || 'This analysis is for informational purposes only.';
     const generatedAt = tag.generated_at || new Date().toISOString();
     const tagVersion = tag.tag_version || '1.0';
-    
     const colorClass = `status-${statusColor}`;
-    
-    // Build recommendations HTML with fallbacks
-    const recommendationsHtml = data.recommendations.map(rec => `
+
+    const recommendationsHtml = (data.recommendations || []).map((rec) => `
         <div class="recommendation-item ${rec.type || 'info'}">
-            <span class="rec-icon">${rec.icon}</span>
+            <span class="rec-icon">${escapeHtml(rec.icon || 'ℹ️')}</span>
             <div class="rec-content">
-                <strong>${rec.title || 'Recommendation'}</strong>
-                <p>${rec.description || rec.text || ''}</p>
+                <strong>${escapeHtml(rec.title || 'Recommendation')}</strong>
+                <p>${escapeHtml(rec.description || rec.text || '')}</p>
             </div>
         </div>
     `).join('');
-    
-    // Build risk assessment HTML with fallbacks
-    const risk = data.risk_assessment;
-    const riskColor = risk.color || (risk.level === 'low' || risk.level === 'Low' ? '#28a745' : '#ffc107');
-    const riskIcon = risk.icon || (risk.level === 'low' || risk.level === 'Low' ? '✅' : '⚠️');
-    const riskDesc = risk.description || `Risk level: ${risk.level}`;
+
+    const risk = data.risk_assessment || {};
+    const riskColor = risk.color || ((risk.level || '').toLowerCase() === 'low' ? '#28a745' : '#ffc107');
+    const riskIcon = risk.icon || ((risk.level || '').toLowerCase() === 'low' ? '✅' : '⚠️');
     const riskHtml = `
         <div class="risk-assessment" style="border-left: 4px solid ${riskColor}">
             <div class="risk-header">
-                <span class="risk-icon">${riskIcon}</span>
-                <span class="risk-level" style="color: ${riskColor}">${risk.level} Risk</span>
+                <span class="risk-icon">${escapeHtml(riskIcon)}</span>
+                <span class="risk-level" style="color: ${riskColor}">${escapeHtml(risk.level || 'Unknown')} Risk</span>
             </div>
-            <p class="risk-description">${riskDesc}</p>
+            <p class="risk-description">${escapeHtml(risk.description || 'Risk level not assessed.')}</p>
             <div class="risk-details">
-                <span>📊 Commercial: ${risk.commercial_risk || 'Unknown'}</span>
-                <span>👤 Personal: ${risk.personal_risk || 'Unknown'}</span>
+                <span>📊 Commercial: ${escapeHtml(risk.commercial_risk || 'Unknown')}</span>
+                <span>👤 Personal: ${escapeHtml(risk.personal_risk || 'Unknown')}</span>
             </div>
         </div>
     `;
-    
-    // Build legal checklist HTML with fallbacks
-    const checklistHtml = data.legal_checklist.map(item => `
+
+    const checklistHtml = (data.legal_checklist || []).map((item) => `
         <div class="checklist-item ${item.status || (item.checked ? 'done' : 'pending')}">
             <span class="check-icon">${item.required !== false ? '☐' : '○'}</span>
-            <span class="check-text">${item.item}</span>
-            <span class="check-status">${item.status || (item.checked ? 'done' : 'pending')}</span>
+            <span class="check-text">${escapeHtml(item.item || '')}</span>
+            <span class="check-status">${escapeHtml(item.status || (item.checked ? 'done' : 'pending'))}</span>
         </div>
     `).join('');
-    
-    // Build quick actions HTML
-    const actionsHtml = data.quick_actions.map(action => `
-        <button class="quick-action-btn" onclick="handleQuickAction('${action.action}', '${escapeHtml(tag.title)}')">${action.label}</button>
+
+    const actionsHtml = (data.quick_actions || []).map((action) => `
+        <button class="quick-action-btn" data-action="${escapeHtml(action.action)}">${escapeHtml(action.label)}</button>
     `).join('');
-    
+
     smartTagContainer.innerHTML = `
         <div class="smart-tag ${colorClass}">
             <div class="tag-header">
                 <span class="tag-emoji">${statusEmoji}</span>
                 <span class="tag-status" style="color: var(--${getColorVar(statusColor)}-color)">
-                    ${statusText}
+                    ${escapeHtml(statusText)}
                 </span>
             </div>
-            
-            <div class="tag-title">${escapeHtml(tag.title)}</div>
+
+            <div class="tag-title">${escapeHtml(tag.title || 'Unknown')}</div>
             ${tag.creator ? `<div class="tag-creator">By ${escapeHtml(tag.creator)}</div>` : ''}
-            ${tag.publication_year ? `<div class="tag-year">Published: ${tag.publication_year}</div>` : ''}
-            
+            ${tag.publication_year ? `<div class="tag-year">Published: ${escapeHtml(String(tag.publication_year))}</div>` : ''}
+
             <div class="tag-timeline">
                 <span>⏱</span>
                 <span>${escapeHtml(expiryTimeline)}</span>
             </div>
-            
-            <!-- Summary Section -->
+
             <div class="tag-summary">
-                <p>${data.summary}</p>
+                <p>${escapeHtml(data.summary || '')}</p>
             </div>
-            
-            <!-- Risk Assessment -->
+
             <div class="tag-section">
                 <h4>⚖️ Risk Assessment</h4>
                 ${riskHtml}
             </div>
-            
-            <!-- Allowed Uses -->
+
             <div class="tag-uses">
                 <h4>📋 Allowed Uses</h4>
                 <div class="uses-list">
-                    ${allowedUsesSummary.map(use => {
+                    ${allowedUsesSummary.map((use) => {
                         const isAllowed = use.startsWith('✓') || use.startsWith('✅');
                         return `<span class="use-item ${isAllowed ? 'allowed' : 'denied'}">${escapeHtml(use)}</span>`;
                     }).join('')}
                 </div>
             </div>
-            
-            <!-- Recommendations -->
+
             <div class="tag-section">
                 <h4>💡 Recommendations</h4>
-                <div class="recommendations-list">
-                    ${recommendationsHtml}
-                </div>
+                <div class="recommendations-list">${recommendationsHtml}</div>
             </div>
-            
-            <!-- Legal Checklist -->
+
             <div class="tag-section">
                 <h4>✅ Legal Checklist</h4>
-                <div class="legal-checklist">
-                    ${checklistHtml}
-                </div>
+                <div class="legal-checklist">${checklistHtml}</div>
             </div>
-            
-            <!-- Confidence -->
+
             <div class="tag-confidence">
-                <span>🎯 Confidence: ${confidenceLevel} (${Math.round(confidenceScore * 100)}%)</span>
+                <span>🎯 Confidence: ${escapeHtml(confidenceLevel)} (${Math.round(confidenceScore * 100)}%)</span>
                 <div class="confidence-bar">
                     <div class="confidence-fill" style="width: ${confidenceScore * 100}%; background: ${getConfidenceColor(confidenceScore)}"></div>
                 </div>
             </div>
-            
+
             ${tag.ai_reasoning ? `
             <div class="tag-reasoning">
                 <div class="tag-reasoning-title">
@@ -333,44 +358,42 @@ function displayDetailedSmartTag(data) {
                     AI Analysis
                 </div>
                 <p>${escapeHtml(tag.ai_reasoning)}</p>
-            </div>
-            ` : ''}
-            
-            <!-- Quick Actions -->
-            <div class="tag-actions">
-                ${actionsHtml}
-            </div>
-            
-            <div class="tag-disclaimer">
-                ⚠️ ${escapeHtml(tagDisclaimer)}
-            </div>
-            
+            </div>` : ''}
+
+            <div class="tag-actions">${actionsHtml}</div>
+
+            <div class="tag-disclaimer">⚠️ ${escapeHtml(tagDisclaimer)}</div>
+
             <div class="tag-meta">
                 <span>Generated: ${new Date(generatedAt).toLocaleDateString()}</span>
-                <span>SCET v${tagVersion} | ${tag.jurisdiction}</span>
+                <span>SCET v${escapeHtml(tagVersion)} | ${escapeHtml(tag.jurisdiction || 'US')}</span>
             </div>
         </div>
     `;
-    
+
+    smartTagContainer.querySelectorAll('[data-action]').forEach((button) => {
+        button.addEventListener('click', () => {
+            handleQuickAction(button.dataset.action, tag.title || '');
+        });
+    });
+
     smartTagSection.classList.remove('hidden');
     smartTagSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Legacy display function for backward compatibility
 function displaySmartTag(tag) {
     displayDetailedSmartTag({
-        tag: tag,
+        tag,
         recommendations: [],
         quick_actions: [],
-        risk_assessment: { level: "Unknown", color: "#6c757d", icon: "❓", description: "Risk not assessed" },
-        summary: "",
+        risk_assessment: { level: 'Unknown', color: '#6c757d', icon: '❓', description: 'Risk not assessed' },
+        summary: '',
         legal_checklist: []
     });
 }
 
-// Handle quick action button clicks
 function handleQuickAction(action, title) {
-    switch(action) {
+    switch (action) {
         case 'verify':
             verifySource(title);
             break;
@@ -384,27 +407,23 @@ function handleQuickAction(action, title) {
             copyCitation(title);
             break;
         case 'full_report':
-            window.open(`${API_BASE}/tag/html?title=${encodeURIComponent(title)}`, '_blank');
+            openFullReport();
             break;
         default:
-            alert(`Action "${action}" - Coming soon!`);
+            alert(`Action "${action}" is not available yet.`);
     }
 }
 
 function verifySource(title) {
     const links = [];
-
     if (selectedResultData && selectedResultData.source_url) {
         links.push(selectedResultData.source_url);
     }
-
-    // Always provide official verification links for manual confirmation.
     links.push('https://www.copyright.gov/public-records/');
     links.push(`https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(title)}`);
 
-    const uniqueLinks = [...new Set(links)];
-    uniqueLinks.forEach((url, idx) => {
-        setTimeout(() => window.open(url, '_blank', 'noopener'), idx * 120);
+    [...new Set(links)].forEach((url, index) => {
+        setTimeout(() => window.open(url, '_blank', 'noopener'), index * 120);
     });
 }
 
@@ -412,7 +431,6 @@ function downloadTag(title) {
     const selected = selectedResultData || {};
     const detail = latestDetailedTagData || {};
     const tag = detail.tag || {};
-
     const generatedAt = new Date().toISOString();
     const fileSafeTitle = (title || 'copyright-report')
         .replace(/[\\/:*?"<>|]+/g, '')
@@ -420,6 +438,7 @@ function downloadTag(title) {
         .replace(/\s+/g, '_')
         .slice(0, 80) || 'copyright-report';
 
+    const reportUrl = buildReportUrl();
     const reportText = [
         'SCET - Copyright Validation Report',
         '=================================',
@@ -431,7 +450,7 @@ function downloadTag(title) {
         `Source URL: ${selected.source_url || 'N/A'}`,
         `Publication Year: ${selected.publication_year || tag.publication_year || 'Unknown'}`,
         `Content Type: ${selected.content_type || 'Unknown'}`,
-        `Jurisdiction: ${tag.jurisdiction || jurisdiction.value || 'US'}`,
+        `Jurisdiction: ${tag.jurisdiction || ((jurisdiction && jurisdiction.value) || 'US')}`,
         '',
         'Status Summary',
         '--------------',
@@ -441,13 +460,15 @@ function downloadTag(title) {
         '',
         'AI Reasoning',
         '-----------',
-        `${tag.ai_reasoning || 'No detailed reasoning available.'}`,
+        tag.ai_reasoning || 'No detailed reasoning available.',
+        '',
+        'Shareable Report',
+        '----------------',
+        reportUrl,
         '',
         'Disclaimer',
         '----------',
-        `${tag.disclaimer || 'This report is for informational purposes only and does not constitute legal advice.'}`,
-        '',
-        `Generated from: ${window.location.href}`
+        tag.disclaimer || 'This report is for informational purposes only and does not constitute legal advice.'
     ].join('\n');
 
     const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
@@ -461,23 +482,120 @@ function downloadTag(title) {
     URL.revokeObjectURL(downloadUrl);
 }
 
-function shareTag(title) {
+async function shareTag(title) {
+    const reportUrl = buildReportUrl();
     if (navigator.share) {
-        navigator.share({
+        await navigator.share({
             title: `Copyright Status: ${title}`,
             text: `Check the copyright status of "${title}" on SCET`,
-            url: window.location.href
+            url: reportUrl
         });
     } else {
-        navigator.clipboard.writeText(window.location.href);
-        alert('Link copied to clipboard!');
+        await navigator.clipboard.writeText(reportUrl);
+        alert('Report link copied to clipboard!');
     }
 }
 
-function copyCitation(title) {
+async function copyCitation(title) {
     const citation = `Copyright analysis for "${title}" generated by SCET - Smart Copyright Expiry Tag System. ${new Date().toLocaleDateString()}`;
-    navigator.clipboard.writeText(citation);
+    await navigator.clipboard.writeText(citation);
     alert('Citation copied to clipboard!');
+}
+
+function openFullReport() {
+    const url = buildReportUrl();
+    window.open(url, '_blank', 'noopener');
+}
+
+function buildReportPayload() {
+    const selected = selectedResultData || {};
+    const detail = latestDetailedTagData || {};
+    const tag = detail.tag || {};
+
+    return {
+        title: selected.title || tag.title || '',
+        creator: selected.creator || tag.creator || '',
+        year: selected.publication_year || tag.publication_year || '',
+        type: selected.content_type || detail.report_data?.content_type || '',
+        jurisdiction: tag.jurisdiction || ((jurisdiction && jurisdiction.value) || 'US'),
+        source: selected.source || 'Multiple Sources',
+        source_url: selected.source_url || '',
+        status: tag.status || selected.copyright_status || '',
+        generated_at: tag.generated_at || new Date().toISOString()
+    };
+}
+
+function buildReportUrl() {
+    const payload = buildReportPayload();
+    persistLastReport(payload);
+    const params = new URLSearchParams();
+    Object.entries(payload).forEach(([key, value]) => {
+        if (value) {
+            params.set(key, value);
+        }
+    });
+    return `${REPORT_PAGE_PATH}?${params.toString()}`;
+}
+
+function persistLastReport(payload) {
+    if (!payload || !payload.title) {
+        return;
+    }
+    localStorage.setItem(STORAGE_KEYS.lastReport, JSON.stringify(payload));
+}
+
+function persistRecentReport(payload) {
+    if (!payload || !payload.title) {
+        return;
+    }
+
+    persistLastReport(payload);
+
+    const current = loadJson(STORAGE_KEYS.recentReports, []);
+    const key = `${payload.title}::${payload.creator}::${payload.year}`;
+    const next = [payload, ...current.filter((item) => `${item.title}::${item.creator}::${item.year}` !== key)].slice(0, 6);
+    localStorage.setItem(STORAGE_KEYS.recentReports, JSON.stringify(next));
+}
+
+function renderRecentReports() {
+    if (!recentReports) {
+        return;
+    }
+
+    const items = loadJson(STORAGE_KEYS.recentReports, []);
+    if (!items.length) {
+        recentReports.innerHTML = '<p class="premium-placeholder-text">Select a result to save a report snapshot here.</p>';
+        return;
+    }
+
+    recentReports.innerHTML = items.map((item) => {
+        const params = new URLSearchParams();
+        Object.entries(item).forEach(([key, value]) => {
+            if (value) {
+                params.set(key, value);
+            }
+        });
+
+        return `
+            <a class="recent-report-item" href="${REPORT_PAGE_PATH}?${params.toString()}">
+                <div class="recent-report-title">${escapeHtml(item.title || 'Untitled')}</div>
+                <div class="recent-report-meta">
+                    <span>${escapeHtml(item.type ? prettyType(item.type) : 'Unknown type')}</span>
+                    <span>${escapeHtml(item.jurisdiction || 'US')}</span>
+                    <span>${escapeHtml(item.year ? String(item.year) : 'Year unknown')}</span>
+                </div>
+            </a>
+        `;
+    }).join('');
+}
+
+function loadJson(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+    } catch (error) {
+        return fallback;
+    }
 }
 
 function getConfidenceColor(score) {
@@ -487,77 +605,80 @@ function getConfidenceColor(score) {
     return '#dc3545';
 }
 
-// Utility Functions
 function showLoading() {
-    loadingIndicator.classList.remove('hidden');
+    if (loadingIndicator) {
+        loadingIndicator.classList.remove('hidden');
+    }
 }
 
 function hideLoading() {
-    loadingIndicator.classList.add('hidden');
+    if (loadingIndicator) {
+        loadingIndicator.classList.add('hidden');
+    }
 }
 
 function hideElements(elements) {
-    elements.forEach(el => el.classList.add('hidden'));
+    elements.filter(Boolean).forEach((element) => element.classList.add('hidden'));
 }
 
 function displayError(message) {
-    resultsList.innerHTML = `<p class="error-message" style="color: var(--danger-color); text-align: center; padding: 20px;">${message}</p>`;
-    searchResults.classList.remove('hidden');
+    if (resultsList && searchResults) {
+        resultsList.innerHTML = `<p class="error-message" style="color: var(--danger-color); text-align: center; padding: 20px;">${escapeHtml(message)}</p>`;
+        searchResults.classList.remove('hidden');
+    }
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === null || text === undefined) {
+        return '';
+    }
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = String(text);
     return div.innerHTML;
 }
 
-function capitalizeFirst(str) {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
+function formatStatus(status) {
+    return String(status || '').replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatStatus(status) {
-    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+function prettyType(value) {
+    return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function getColorVar(color) {
     const colorMap = {
-        'green': 'success',
-        'yellow': 'warning',
-        'orange': 'warning',
-        'red': 'danger',
-        'gray': 'gray-500'
+        green: 'success',
+        yellow: 'warning',
+        orange: 'warning',
+        red: 'danger',
+        gray: 'gray-500'
     };
     return colorMap[color] || 'gray-500';
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('SCET Frontend loaded - v3.0');
-    
-    // Focus search input
-    searchInput.focus();
-    
-    // Check API health
+    console.log('SCET Frontend loaded - v4.0');
+
+    if (searchInput) {
+        searchInput.focus();
+    }
+
     checkApiHealth();
-    
-    // Auto-execute search on search page if query params exist
+    renderRecentReports();
+
     if (isSearchPage) {
         const urlParams = new URLSearchParams(window.location.search);
         const query = urlParams.get('query');
         const type = urlParams.get('type');
         const country = urlParams.get('country');
         const source = urlParams.get('source');
-        
+
         if (query) {
-            // Pre-fill search input and filters
             searchInput.value = query;
-            if (type) contentType.value = type;
-            if (country) jurisdiction.value = country;
-            if (source) metadataSource.value = source;
-            
-            // Auto-execute search
+            if (type && contentType) contentType.value = type;
+            if (country && jurisdiction) jurisdiction.value = country;
+            if (source && metadataSource) metadataSource.value = source;
+
             setTimeout(() => {
                 performSearch();
             }, 300);
@@ -569,7 +690,6 @@ async function checkApiHealth() {
     try {
         const response = await fetch(`${API_BASE}/health`);
         const data = await response.json();
-        
         if (data.status === 'healthy') {
             console.log('API connected:', data);
         } else {
@@ -580,21 +700,15 @@ async function checkApiHealth() {
     }
 }
 
-// Demo: Quick search examples
-const examples = [
-    'Harry Potter',
-    'Sherlock Holmes',
-    'The Great Gatsby'
-];
+const examples = ['Harry Potter', 'Sherlock Holmes', 'The Great Gatsby'];
 
-// Add example searches hint (only on search page, not home since home redirects)
 if (isSearchPage) {
     const searchBox = document.querySelector('.search-box');
     if (searchBox) {
         const searchHint = document.createElement('div');
         searchHint.className = 'search-hint';
         searchHint.style.cssText = 'font-size: 13px; color: var(--gray-500); margin-top: 8px;';
-        searchHint.innerHTML = `Try: ${examples.map(e => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${e}';performSearch();return false;">${e}</a>`).join(' • ')}`;
+        searchHint.innerHTML = `Try: ${examples.map((example) => `<a href="#" style="color: var(--primary-color);" onclick="document.getElementById('searchInput').value='${example}';performSearch();return false;">${example}</a>`).join(' • ')}`;
         searchBox.appendChild(searchHint);
     }
 }

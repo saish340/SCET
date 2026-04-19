@@ -2100,6 +2100,41 @@ body::before {
     margin-top: 2px;
 }
 
+.recent-reports-list {
+    display: grid;
+    gap: 12px;
+}
+
+.recent-report-item {
+    display: block;
+    text-decoration: none;
+    border: 1px solid #253447;
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(15, 23, 42, 0.45);
+    transition: all 0.2s ease;
+}
+
+.recent-report-item:hover {
+    transform: translateY(-2px);
+    border-color: #3b82f6;
+    background: rgba(18, 30, 52, 0.7);
+}
+
+.recent-report-title {
+    color: #e5edf8;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.recent-report-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: #9ca3af;
+    font-size: 13px;
+}
+
 @media (max-width: 1024px) {
     .premium-dashboard-grid {
         grid-template-columns: 1fr;

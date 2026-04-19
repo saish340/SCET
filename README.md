@@ -1,214 +1,141 @@
 # SCET - Smart Copyright Expiry Tag System
 
-## AI-Powered Copyright Status Search
+SCET is a multi-page web app for discovering copyright-related metadata, estimating protection status, and generating shareable validation reports for creative works.
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green.svg)](https://fastapi.tiangolo.com/)
-[![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://scet.vercel.app/)
+It combines:
 
-**Live Demo:** [https://scet.vercel.app/](https://scet.vercel.app/)
+- A static frontend built with HTML, CSS, and vanilla JavaScript
+- A Python serverless API for search, smart-tag generation, report data, and YouTube music-risk checks
+- Public metadata and registry sources such as Open Library, Wikipedia, and copyright office search portals
 
----
+## Features
 
-## 📋 Overview
+### Search and discovery
 
-SCET (Smart Copyright Expiry Tag) is an AI-powered web application that helps you search and verify copyright status of creative works including books, films, music, and artwork.
+- Fuzzy title matching with similarity-based ranking
+- Type-aware filtering for books, music, film, artwork, software, and related categories
+- Query correction and related suggestions
+- Jurisdiction and source filtering
+- Search-page recent report history stored in `localStorage`
 
-**Key Capabilities:**
-- Search copyright status with AI-powered relevance matching
-- Determine copyright ownership and expiry dates
-- Get instant analysis with confidence scores
-- Filter by jurisdiction (US, EU, UK, CA, AU, JP, IN)
-- Real-time similarity matching for accurate results
+### Copyright analysis
 
----
+- Rule-based status prediction for `PROTECTED`, `PUBLIC_DOMAIN`, and `UNKNOWN` cases
+- Jurisdiction-aware expiry estimates
+- Confidence scoring and reasoning summaries
+- Quick actions for verification, sharing, downloading, and opening full reports
 
-## 🎯 Features
+### Report flow
 
-### 🔍 AI-Based Search Engine
-- **Text similarity matching** using advanced algorithms (Jaccard similarity)
-- **Multi-source data aggregation** from Open Library, Wikipedia, US Copyright Office
-- **Relevance filtering** - only shows results above 30% similarity threshold
-- **Real-time search** with instant results
-- **Quick search sidebar** with popular searches and category filters
+- Shareable report pages via `/report`
+- Printable report layout
+- Allowed-use summary and consulted-source rendering
 
-### ⚖️ Copyright Status Analysis
-- **Automatic status detection** (PROTECTED, PUBLIC_DOMAIN, UNKNOWN)
-- **Multi-jurisdiction support** with region-specific copyright rules
-- **Publication year analysis** for copyright expiry calculation
-- **Confidence scoring** for reliability assessment
-- **Detailed metadata** including creator, publication year, source
+### YouTube music check
 
-### 🎨 Modern Dark Theme UI
-- **Clean, minimal design** following modern SaaS principles
-- **Fully responsive** layout works on desktop, tablet, and mobile
-- **Enhanced result cards** with:
-  - Color-coded status badges (red/green/gray)
-  - Similarity match scores
-  - Metadata tags (year, type, source)
-  - Hover effects with glow
-  - 2px outlined borders
-- **Smooth animations** and transitions
-- **Professional typography** using Inter font family
+- Metadata-based copyright risk estimation for music usage
+- MusicBrainz enrichment by default
+- Optional Spotify metadata support through environment variables
+- No hardcoded YouTube API key in the frontend
 
-### 📊 Smart Copyright Tags
-- **Detailed copyright information** including status, expiry, allowed uses
-- **Visual indicators** with emojis and color coding
-- **Legal jurisdiction context**
-- **AI-powered reasoning** and confidence levels
-- **Comprehensive metadata display**
+## Project structure
 
----
-
-## 🚀 Technology Stack
-
-**Frontend:**
-- HTML5, CSS3 (modern dark theme with gradients)
-- Vanilla JavaScript (ES6+)
-- Responsive design with CSS Grid and Flexbox
-- Inter font family
-
-**Backend:**
-- Python 3.9+ with FastAPI framework
-- RESTful API architecture
-- Real-time web scraping
-- Serverless deployment on Vercel
-
-**Data Sources:**
-- [Open Library API](https://openlibrary.org/developers/api) - Books and publications
-- [Wikipedia API](https://www.mediawiki.org/wiki/API) - General knowledge and films
-- US Copyright Office - Copyright records
-- Indian Copyright Office - Regional records
-
----
-
-## 📁 Project Structure
-
-```
+```text
 SCET/
 ├── api/
-│   └── index.py          # FastAPI backend (Vercel serverless function)
+│   ├── index.py
+│   ├── pyproject.toml
+│   └── requirements.txt
 ├── css/
-│   └── styles.css        # Main stylesheet (dark theme)
+│   └── styles.css
 ├── js/
-│   └── app-v3.js         # Frontend JavaScript
-├── index.html            # Main HTML file
-├── vercel.json           # Vercel deployment configuration
-├── requirements.txt      # Python dependencies
-└── README.md             # This file
+│   ├── app-v3.js
+│   ├── report.js
+│   └── youtube-check.js
+├── about.html
+├── disclaimer.html
+├── how-it-works.html
+├── index.html
+├── report.html
+├── search.html
+├── sources.html
+├── vercel.json
+├── youtube-check.html
+└── README.md
 ```
 
----
-
-## 🔧 API Endpoints
+## API endpoints
 
 ### Search
-```
-GET /api/v1/search?q={query}&jurisdiction={jurisdiction}
-```
-Search for works by title with optional jurisdiction filter.
 
-**Example:**
 ```bash
-curl "https://scet.vercel.app/api/v1/search?q=harry+potter"
+GET /api/v1/search?q={query}&jurisdiction={jurisdiction}&type={type}&source={source}
 ```
 
-### Generate Smart Tag
-```
-GET /api/v1/tag/detailed?title={title}&year={year}&creator={creator}&jurisdiction={jurisdiction}
-```
-Generate a detailed copyright tag for a specific work.
+Returns ranked matches, correction hints, suggestions, and search explanation metadata.
 
-**Example:**
+### Detailed smart tag
+
 ```bash
-curl "https://scet.vercel.app/api/v1/tag/detailed?title=Romeo+and+Juliet&year=1597&jurisdiction=US"
+GET /api/v1/tag/detailed?title={title}&year={year}&creator={creator}&jurisdiction={jurisdiction}&type={type}
 ```
 
-### Health Check
+Returns smart-tag data, recommendations, risk assessment, and legal checklist items.
+
+### Report data
+
+```bash
+GET /api/v1/report?title={title}&year={year}&creator={creator}&type={type}&jurisdiction={jurisdiction}&source={source}
 ```
+
+Returns structured data used by `report.html`.
+
+### YouTube music risk check
+
+```bash
+GET /api/youtube-check?title={title}&artist={artist}
+```
+
+Returns a metadata-based risk estimate for using a song on YouTube.
+
+### Health check
+
+```bash
 GET /api/v1/health
 ```
-Check API status.
 
----
+## Local development
 
-## 🌐 Deployment
+### Frontend
 
-The application is deployed on **Vercel** with serverless functions.
+Open `index.html` directly for static page work, or serve the repo root with any local static server if you want cleaner routing behavior.
 
-**Deployment Configuration (`vercel.json`):**
-- API routes are handled by Python serverless functions
-- Static assets (HTML, CSS, JS) served from root
-- Cache headers configured for optimal performance
-- CORS enabled for all origins
+### Backend
 
-**To deploy your own instance:**
+Install Python dependencies from the repo root or from `api/` depending on your setup:
 
-1. Fork this repository
-2. Import to Vercel
-3. Deploy automatically (Vercel auto-detects configuration)
+```bash
+pip install -r requirements.txt
+```
 
----
+Optional environment variables:
 
-## 🎨 UI Features
+```bash
+SPOTIFY_CLIENT_ID=your_client_id
+SPOTIFY_CLIENT_SECRET=your_client_secret
+```
 
-### Search Results Display
-- **Outlined cards** with 2px borders
-- **Color-coded badges:**
-  - 🔴 PROTECTED (red) - Still under copyright protection
-  - 🟢 PUBLIC_DOMAIN (green) - Free to use
-  - ⚪ UNKNOWN (gray) - Status unclear
-- **Metadata display:**
-  - 📅 Publication year
-  - 📑 Content type (book, film, music, etc.)
-  - 📚 Data source
-  - 🎯 Similarity match percentage
+These are only needed for Spotify metadata enrichment in the YouTube music checker.
 
-### Quick Searches Sidebar
-- **Popular searches:** Harry Potter, Star Wars, Beatles, etc.
-- **Category filters:** Books, Films, Music, Art
-- **One-click search** activation
-- **Sticky positioning** (remains visible while scrolling)
+## Deployment
 
-### Responsive Design
-- Desktop: Two-column layout (results + sidebar)
-- Tablet/Mobile: Stacked layout with sidebar on top
-- Touch-friendly buttons and cards
+The app is configured for Vercel:
 
----
+- Static pages are served directly
+- `/api/:path*` is rewritten to the Python serverless handler
+- `/youtube-check` and `/report` are rewritten to their HTML pages
 
-## ⚠️ Disclaimer
+## Notes
 
-**Important Legal Notice:**
-
-This tool provides **informational analysis only** and does **not constitute legal advice**. Copyright laws are complex and vary by jurisdiction. The information provided by SCET should not be relied upon for legal decisions.
-
-**For accurate copyright status:**
-- Consult a qualified intellectual property attorney
-- Verify with official copyright office records
-- Consider jurisdiction-specific regulations
-- Account for special cases and exceptions
-
----
-
-## 📄 License
-
-This project is created for educational and research purposes.
-
----
-
-## 👨‍💻 Developer
-
-Created by **Saish Malvankar** (saish340)
-
----
-
-## 🔗 Links
-
-- **Live Demo:** [https://scet.vercel.app/](https://scet.vercel.app/)
-- **GitHub:** [https://github.com/saish340/SCET](https://github.com/saish340/SCET)
-- **API Health:** [https://scet.vercel.app/api/v1/health](https://scet.vercel.app/api/v1/health)
-
----
-
-**Last Updated:** February 2026
+- This project provides informational analysis, not legal advice.
+- Official records and qualified legal review should be used for any real legal decision.

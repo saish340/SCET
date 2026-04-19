@@ -36,6 +36,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/report", "destination": "/report.html" },
     { "source": "/youtube-check", "destination": "/youtube-check.html" },
     { "source": "/api/:path*", "destination": "/api/index.py" }
   ]
