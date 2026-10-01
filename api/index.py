@@ -15,6 +15,10 @@ from difflib import SequenceMatcher
 from datetime import datetime
 
 
+SERVICE_NAME = "SCET API"
+SERVICE_VERSION = "1.0.0"
+
+
 QUERY_NOISE_WORDS = {
     'song', 'songs', 'music', 'track', 'audio', 'video', 'lyrics',
     'official', 'full', 'new', 'old', 'hindi', 'marathi', 'tamil',
@@ -1031,7 +1035,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         
         if path == '/api/v1/health':
-            response = {"status": "healthy", "timestamp": datetime.now().isoformat()}
+            response = {"status": "healthy", "service": SERVICE_NAME, "version": SERVICE_VERSION, "timestamp": datetime.now().isoformat()}
         
         elif path == '/api/v1/search':
             q = params.get('q', '')
