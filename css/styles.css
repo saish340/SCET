@@ -1743,6 +1743,21 @@ body {
     font-size: 14px;
 }
 
+.yt-jev-section {
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    padding-top: 14px;
+}
+
+.yt-jev-unavailable {
+    color: var(--text-secondary);
+    font-size: 14px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+
 .yt-smart-suggestion a {
     color: #93c5fd;
     margin-left: 6px;
