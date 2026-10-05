@@ -42,12 +42,10 @@ async function runYoutubeCheck() {
     resultSection.classList.add('hidden');
 
     try {
-        // YouTube Data API metadata stays the evidence source; the backend
-        // deterministic engine runs first and Jev only adds probabilities.
-        // Fetch metadata first so observed signals can enrich the backend call.
-        const ytMeta = await fetchYouTubeMetadata(`${title} ${artist}`.trim());
-        const youtubeSignals = buildYoutubeSignalsForJev(ytMeta, title, artist);
-        const data = await fetchBaseAssessment(title, artist, youtubeSignals);
+        const [data, ytMeta] = await Promise.all([
+            fetchBaseAssessment(title, artist),
+            fetchYouTubeMetadata(`${title} ${artist}`.trim())
+        ]);
 
         if (!data || data.error) {
             throw new Error((data && data.error) || 'Failed to check copyright');
@@ -64,65 +62,8 @@ async function runYoutubeCheck() {
     }
 }
 
-async function fetchBaseAssessment(title, artist, youtubeSignals) {
+async function fetchBaseAssessment(title, artist) {
     const params = new URLSearchParams({ title, artist });
-    if (youtubeSignals && Object.keys(youtubeSignals).length > 0) {
-        try {
-            const encoded = base64UrlEncodeJson(youtubeSignals);
-            if (encoded) params.set('yt', encoded);
-        } catch (encodeError) {
-            // Optional enrichment only: never break the base assessment.
-        }
-
-/**
- * Build the optional Jev signal object from OBSERVED YouTube Data API
- * metadata only. Never invents fields: every flag is derived from the
- * snippet/channel/description actually returned, text is omitted when empty.
- * Absent metadata simply yields fewer signals (backend falls back cleanly).
- */
-function buildYoutubeSignalsForJev(ytMeta, title, artist) {
-    const signals = {};
-    if (!ytMeta || !ytMeta.available || !ytMeta.video) return signals;
-    const video = ytMeta.video || {};
-    const snippet = video.snippet || {};
-    const channelTitle = String(snippet.channelTitle || '').trim();
-    const description = String(snippet.description || '');
-    const videoId = String(video.videoId || video.id || '').trim();
-    if (channelTitle) signals.channelName = channelTitle;
-    if (snippet.channelId) signals.channelId = String(snippet.channelId);
-    if (videoId) signals.videoId = videoId;
-    if (description.trim()) signals.description = description.slice(0, 2000);
-    const stats = video.statistics || {};
-    const views = stats.viewCount;
-    if (views !== undefined && views !== null && String(views).trim() !== '' && !Number.isNaN(Number(views))) {
-        signals.viewCount = Number(views);
-    }
-    const blob = `${title || ''} ${artist || ''} ${channelTitle} ${description}`.toLowerCase();
-    const channelBlob = channelTitle.toLowerCase();
-    if (!channelBlob) return signals;
-    if (/(official music video|official video|official audio)/.test(blob)) signals.officialMusicVideo = true;
-    if (/(official artist channel|official channel|verified)/.test(channelBlob) || channelBlob.includes('vevo')) signals.officialChannel = true;
-    if (channelBlob.includes('vevo')) signals.vevoIndicator = true;
-    if (/(licensed to youtube by|provided to youtube)/.test(description.toLowerCase())) signals.licensedToYouTube = true;
-    if (containsAny(blob, FREE_SOURCES)) signals.freeMusicSource = true;
-    if (channelBlob.includes('nocopyrightsounds') || blob.includes('ncs release')) signals.ncsIndicator = true;
-    if (blob.includes('youtube audio library')) signals.youtubeAudioLibraryIndicator = true;
-    if (matchesHighRiskArtist(title, artist)) signals.commercialArtistIndicator = true;
-    if (blob.includes('remix')) signals.remixIndicator = true;
-    if (blob.includes('cover')) signals.coverIndicator = true;
-    if (blob.includes('lyric')) signals.lyricsVideoIndicator = true;
-    return signals;
-}
-
-function base64UrlEncodeJson(value) {
-    const json = JSON.stringify(value || {});
-    const bytes = new TextEncoder().encode(json);
-    let binary = '';
-    bytes.forEach((b) => { binary += String.fromCharCode(b); });
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-    }
     const response = await fetch(`${API_BASE}/api/youtube-check?${params.toString()}`);
     const data = await response.json();
     if (!response.ok || data.error) {
@@ -370,8 +311,6 @@ function renderMusicResultCard(data) {
                 <p class="yt-meta-note">${escapeHtml(data.youtube_meta_note || '')}</p>
             </div>
 
-            ${buildJevAssessmentHtml(data.jev)}
-
             <div class="tag-section">
                 <h4>Allowed Uses</h4>
                 <ul class="music-list">${usesHtml}</ul>
@@ -389,7 +328,7 @@ function renderMusicResultCard(data) {
                 <p class="yt-risk-note">${escapeHtml(data.risk_note || '')}</p>
             </div>
 
-            <div class="tag-disclaimer">⚠️ This tool provides an estimated copyright risk based on publicly available metadata and probabilistic analysis. It does not provide legal advice or guarantee whether YouTube Content ID will issue a claim or strike. Final decisions depend on copyright owners, platform systems, licenses and applicable law.</div>
+            <div class="tag-disclaimer">⚠️ This tool provides estimated copyright risk based on public data. Final results depend on YouTube Content ID system.</div>
         </div>
     `;
 
@@ -416,52 +355,6 @@ function containsAny(text, keywords) {
 function matchesHighRiskArtist(title, artist) {
     const blob = `${title || ''} ${artist || ''}`.toLowerCase();
     return HIGH_RISK_ARTISTS.some((name) => blob.includes(name.toLowerCase()));
-
-/**
- * Render the additive "AI Risk Assessment (Jev)" section. The deterministic
- * risk engine above is untouched: this block only visualizes the Jev
- * probabilities/confidence, or the graceful fallback when Jev is unavailable.
- */
-function buildJevAssessmentHtml(jev) {
-    if (!jev || typeof jev !== 'object') {
-        return `
-            <div class="tag-section yt-jev-section">
-                <h4>AI Risk Assessment</h4>
-                <p class="yt-jev-unavailable">AI probabilistic assessment unavailable. Risk estimated using available metadata.</p>
-            </div>
-        `;
-    }
-    if (!jev.available) {
-        return `
-            <div class="tag-section yt-jev-section">
-                <h4>AI Risk Assessment</h4>
-                <p class="yt-jev-unavailable">AI probabilistic assessment unavailable. Risk estimated using available metadata.</p>
-                <p class="yt-meta-note">Jev status: ${escapeHtml(jev.reason || 'unavailable')}</p>
-            </div>
-        `;
-    }
-    const riskPct = Math.round(Number(jev.copyright_risk_probability || 0) * 100);
-    const confPct = Math.round(Number(jev.confidence || 0) * 100);
-    const tierLabels = { high_risk: 'HIGH COPYRIGHT RISK', medium_risk: 'MEDIUM / POSSIBLE CLAIM', lower_risk: 'LOWER RISK', uncertain: 'UNCERTAIN' };
-    const tierLabel = tierLabels[jev.risk_tier] || 'UNCERTAIN';
-    const tierClass = jev.risk_tier === 'high_risk' ? 'badge-protected' : jev.risk_tier === 'lower_risk' ? 'badge-public' : 'badge-unknown';
-    const heading = jev.uncertain ? 'UNCERTAIN' : tierLabel;
-    const reasons = Array.isArray(jev.reasons) && jev.reasons.length ? jev.reasons : ['Assessment based on limited available metadata'];
-    return `
-        <div class="tag-section yt-jev-section">
-            <h4>AI Risk Assessment</h4>
-            <div class="music-card-grid">
-                <div class="music-row"><strong>Copyright Risk Probability:</strong> ${riskPct}%</div>
-                <div class="music-row"><strong>Assessment Confidence:</strong> ${confPct}%</div>
-            </div>
-            <p><strong>Risk Level:</strong> <span class="result-badge ${tierClass}">${escapeHtml(heading)}</span></p>
-            <p><strong>Why:</strong></p>
-            <ul class="yt-reason-list">${reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
-            <p class="yt-meta-note">${escapeHtml(jev.disclaimer || 'Estimated copyright risk. Not legal advice; Content ID outcomes are not guaranteed.')}</p>
-        </div>
-    `;
-}
-
 }
 
 function buildMeterBlocks(score) {
